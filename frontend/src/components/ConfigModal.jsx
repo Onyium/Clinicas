@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import api from '../api';
-const API_URL = `/api`;
 
 export default function ConfigModal({ isOpen, onClose, onSaved }) {
   const [config, setConfig] = useState({
@@ -14,7 +12,7 @@ export default function ConfigModal({ isOpen, onClose, onSaved }) {
 
   useEffect(() => {
     if (isOpen) {
-      axios.get(`/configuracion`).then(res => {
+      api.get(`/api/configuracion`).then(res => {
         if (res.data) {
           setConfig({
             ...res.data,
@@ -23,7 +21,7 @@ export default function ConfigModal({ isOpen, onClose, onSaved }) {
             permite_reprogramar_bot: Boolean(res.data.permite_reprogramar_bot)
           });
         }
-      });
+      }).catch(err => console.error('Error cargando configuración:', err));
     }
   }, [isOpen]);
 
@@ -32,7 +30,7 @@ export default function ConfigModal({ isOpen, onClose, onSaved }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.put(`/configuracion`, config);
+      await api.put(`/api/configuracion`, config);
       onSaved(config);
       onClose();
     } catch (err) {
@@ -112,13 +110,13 @@ export default function ConfigModal({ isOpen, onClose, onSaved }) {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border rounded-lg text-xs text-slate-600 hover:bg-slate-50"
+              className="px-4 py-2 border rounded-lg text-xs text-slate-600 hover:bg-slate-50 cursor-pointer"
             >
               Cerrar
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 cursor-pointer"
             >
               Guardar Configuración
             </button>

@@ -2,7 +2,7 @@ import React from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import api from '../api';
+
 export default function SelectorFechaModal({ isOpen, onClose, onFechaSeleccionada }) {
   if (!isOpen) return null;
 
@@ -14,7 +14,7 @@ export default function SelectorFechaModal({ isOpen, onClose, onFechaSeleccionad
             <h2 className="text-base font-bold text-slate-800">📅 Selecciona el día para la cita</h2>
             <p className="text-xs text-slate-500">Haz clic sobre el día en el que deseas agendar al paciente.</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-sm">✕</button>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-sm cursor-pointer">✕</button>
         </div>
 
         <div className="calendario-mini">
@@ -39,7 +39,7 @@ export default function SelectorFechaModal({ isOpen, onClose, onFechaSeleccionad
           <button
             type="button"
             onClick={onClose}
-            className="px-3 py-1.5 border rounded-lg text-xs text-slate-600 hover:bg-slate-50"
+            className="px-3 py-1.5 border rounded-lg text-xs text-slate-600 hover:bg-slate-50 cursor-pointer"
           >
             Cancelar
           </button>

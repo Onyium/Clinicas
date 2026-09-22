@@ -1,5 +1,4 @@
 import React from 'react';
-import api from '../api';
 
 const STATUS_BADGES = {
   RESERVADA: 'bg-amber-100 text-amber-800 border-amber-300',

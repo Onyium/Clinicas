@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import api from '../api';
+
 const FRECUENCIAS = [
   'Cada 8 horas',
   'Cada 12 horas',
@@ -28,7 +28,7 @@ export default function RecetaModal({ isOpen, onClose, cita }) {
 
   const cargarSeguimiento = () => {
     if (cita?.id) {
-      axios.get(`/api/recetas/seguimiento/${cita.id}`)
+      api.get(`/api/recetas/seguimiento/${cita.id}`)
         .then(res => setHistorialTratamiento(res.data || []))
         .catch((err) => console.error('Error cargando auditoría:', err));
     }
@@ -65,7 +65,7 @@ export default function RecetaModal({ isOpen, onClose, cita }) {
     setEnviando(true);
 
     try {
-      await axios.post('/api/recetas/multiple', {
+      await api.post('/api/recetas/multiple', {
         cita_id: cita.id,
         paciente_nombre: cita.paciente_nombre,
         paciente_telefono: cita.paciente_telefono,
@@ -86,7 +86,7 @@ export default function RecetaModal({ isOpen, onClose, cita }) {
   const handleProbarRecordatorioManual = async () => {
     if (!cita?.id) return;
     try {
-      await axios.post(`/api/test/enviar-recordatorio-cita/${cita.id}`);
+      await api.post(`/api/test/enviar-recordatorio-cita/${cita.id}`);
       alert(`🧪 Recordatorio de ${cita.paciente_nombre} enviado. Responde "1" en WhatsApp y dale a 🔄.`);
     } catch (err) {
       alert(err.response?.data?.error || 'Error al enviar recordatorio de esta cita');

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import api from '../api';
+
 export default function ConsultaMedicaView({ cita, onVolver }) {
   const [loading, setLoading] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -21,10 +21,10 @@ export default function ConsultaMedicaView({ cita, onVolver }) {
     if (!cita?.id) return;
     setLoading(true);
 
-    // Cargar datos previos de la cita y medicamentos
+    // Cargar datos previos de la cita y medicamentos usando la instancia 'api'
     Promise.all([
-      axios.get(`/api/citas`),
-      axios.get(`/api/recetas/seguimiento/${cita.id}`).catch(() => ({ data: [] }))
+      api.get(`/api/citas`),
+      api.get(`/api/recetas/seguimiento/${cita.id}`).catch(() => ({ data: [] }))
     ]).then(([resCitas, resRecetas]) => {
       const actual = resCitas.data.find(c => c.id === cita.id);
       if (actual) {
@@ -66,7 +66,7 @@ export default function ConsultaMedicaView({ cita, onVolver }) {
     e.preventDefault();
     setGuardando(true);
     try {
-      await axios.put(`/api/consultas/${cita.id}`, {
+      await api.put(`/api/consultas/${cita.id}`, {
         ...form,
         medicamentos: medicamentos.filter(m => m.medicamento.trim() !== '')
       });
@@ -96,7 +96,7 @@ export default function ConsultaMedicaView({ cita, onVolver }) {
           <button
             type="button"
             onClick={onVolver}
-            className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition"
+            className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
           >
             ← Volver a Agenda
           </button>
@@ -104,7 +104,7 @@ export default function ConsultaMedicaView({ cita, onVolver }) {
             type="button"
             onClick={handleGuardar}
             disabled={guardando}
-            className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition shadow-sm disabled:opacity-50"
+            className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition shadow-sm disabled:opacity-50 cursor-pointer"
           >
             {guardando ? 'Guardando...' : '💾 Guardar Consulta'}
           </button>
@@ -182,7 +182,7 @@ export default function ConsultaMedicaView({ cita, onVolver }) {
             <button
               type="button"
               onClick={agregarMedicamento}
-              className="text-xs font-bold text-blue-600 bg-white border border-blue-200 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition"
+              className="text-xs font-bold text-blue-600 bg-white border border-blue-200 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition cursor-pointer"
             >
               + Agregar Medicamento
             </button>
@@ -232,7 +232,7 @@ export default function ConsultaMedicaView({ cita, onVolver }) {
                     <button
                       type="button"
                       onClick={() => eliminarMedicamento(index)}
-                      className="text-rose-500 hover:text-rose-700 text-xs font-bold"
+                      className="text-rose-500 hover:text-rose-700 text-xs font-bold cursor-pointer"
                     >
                       ✕
                     </button>

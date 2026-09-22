@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import api from '../api';
+
 export default function ExpedienteModal({ isOpen, onClose, pacienteId }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -17,7 +17,7 @@ export default function ExpedienteModal({ isOpen, onClose, pacienteId }) {
     if (!pacienteId) return;
     setLoading(true);
     try {
-      const res = await axios.get(`/api/pacientes/${pacienteId}`);
+      const res = await api.get(`/api/pacientes/${pacienteId}`);
       setData(res.data);
       setForm({
         alergias: res.data.paciente.alergias || 'Ninguna',
@@ -43,6 +43,8 @@ export default function ExpedienteModal({ isOpen, onClose, pacienteId }) {
   const handleGuardarDatosClinicos = async (e) => {
     e.preventDefault();
     try {
+      // Si tu backend usa PUT o requiere el ID, ajústalo aquí si es necesario, 
+      // por ahora mantenemos la ruta usando tu instancia centralizada 'api'
       await api.post('/api/pacientes', {
         nombre: data.paciente.nombre,
         telefono: data.paciente.telefono,
