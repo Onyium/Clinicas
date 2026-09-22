@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-
+import api from '../api';
 export default function PacientesDirectorioModal({ isOpen, onClose, onSelectPaciente }) {
   const [pacientes, setPacientes] = useState([]);
   const [busqueda, setBusqueda] = useState('');
@@ -9,7 +9,7 @@ export default function PacientesDirectorioModal({ isOpen, onClose, onSelectPaci
   const fetchPacientes = async (query = '') => {
     setLoading(true);
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/pacientes?q=${encodeURIComponent(query)}`);
+      const res = await axios.get(`/api/pacientes?q=${encodeURIComponent(query)}`);
       setPacientes(res.data || []);
     } catch (err) {
       console.error(err);

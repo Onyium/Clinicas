@@ -2,7 +2,7 @@ import React from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
-
+import api from '../api';
 export default function SelectorFechaModal({ isOpen, onClose, onFechaSeleccionada }) {
   if (!isOpen) return null;
 

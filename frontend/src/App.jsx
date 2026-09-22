@@ -19,7 +19,8 @@ import ExpedienteClinicoView from './components/ExpedienteClinicoView';
 import CatalogoPacientesView from './components/CatalogoPacientesView';
 import ConsultaMedicaView from './components/ConsultaMedicaView';
 
-const API_URL = '${import.meta.env.VITE_API_URL}/api';
+const API_URL = `/api`;
+import api from '../api';
 
 const STATUS_COLORS = {
   RESERVADA: { bg: '#F59E0B', border: '#D97706' },

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import api from '../api';
 
 export default function CatalogoPacientesView({ 
   onVerExpediente, 
@@ -15,7 +16,7 @@ export default function CatalogoPacientesView({
   const cargarPacientes = async (query = '') => {
     setLoading(true);
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/pacientes?q=${encodeURIComponent(query)}`);
+      const res = await axios.get(`/api/pacientes?q=${encodeURIComponent(query)}`);
       setPacientes(res.data || []);
     } catch (err) {
       console.error('Error al cargar catálogo de pacientes:', err);

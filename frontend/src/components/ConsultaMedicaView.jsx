@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-
+import api from '../api';
 export default function ConsultaMedicaView({ cita, onVolver }) {
   const [loading, setLoading] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -23,8 +23,8 @@ export default function ConsultaMedicaView({ cita, onVolver }) {
 
     // Cargar datos previos de la cita y medicamentos
     Promise.all([
-      axios.get(`${import.meta.env.VITE_API_URL}/api/citas`),
-      axios.get(`${import.meta.env.VITE_API_URL}/api/recetas/seguimiento/${cita.id}`).catch(() => ({ data: [] }))
+      axios.get(`/api/citas`),
+      axios.get(`/api/recetas/seguimiento/${cita.id}`).catch(() => ({ data: [] }))
     ]).then(([resCitas, resRecetas]) => {
       const actual = resCitas.data.find(c => c.id === cita.id);
       if (actual) {
@@ -66,7 +66,7 @@ export default function ConsultaMedicaView({ cita, onVolver }) {
     e.preventDefault();
     setGuardando(true);
     try {
-      await axios.put(`${import.meta.env.VITE_API_URL}/api/consultas/${cita.id}`, {
+      await axios.put(`/api/consultas/${cita.id}`, {
         ...form,
         medicamentos: medicamentos.filter(m => m.medicamento.trim() !== '')
       });
