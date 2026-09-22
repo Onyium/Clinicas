@@ -17,7 +17,7 @@ import PacientesDirectorioModal from './components/PacientesDirectorioModal';
 import ExpedienteClinicoView from './components/ExpedienteClinicoView';
 // IMPORTACIONES FALTANTES:
 import CatalogoPacientesView from './components/CatalogoPacientesView';
-import ConsultaMedicaView from '.components/ConsultaMedicaView';
+import ConsultaMedicaView from './components/ConsultaMedicaView';
 
 import api from 'C:/Users/admin/CLINICA-BOT/frontend/src/api.js';
 
