@@ -3,7 +3,6 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import axios from 'axios';
 
 import CitaModal from './components/CitaModal';
 import EmergenciaModal from './components/EmergenciaModal';
@@ -15,12 +14,10 @@ import SelectorFechaModal from './components/SelectorFechaModal';
 import ExpedienteModal from './components/ExpedienteModal';
 import PacientesDirectorioModal from './components/PacientesDirectorioModal';
 import ExpedienteClinicoView from './components/ExpedienteClinicoView';
-// IMPORTACIONES FALTANTES:
 import CatalogoPacientesView from './components/CatalogoPacientesView';
 import ConsultaMedicaView from './components/ConsultaMedicaView';
 
 import api from './api';
-
 
 const STATUS_COLORS = {
   RESERVADA: { bg: '#F59E0B', border: '#D97706' },
@@ -52,7 +49,7 @@ export default function App() {
   const [expedienteSeleccionadoId, setExpedienteSeleccionadoId] = useState(null);
   const [diaSeleccionado, setDiaSeleccionado] = useState('');
   const [citaParaReceta, setCitaParaReceta] = useState(null);
-  const [vistaActual, setVistaActual] = useState('catalogo'); // 'agenda' | 'catalogo' | 'consulta'
+  const [vistaActual, setVistaActual] = useState('catalogo'); // 'agenda' | 'catalogo' | 'consulta' | 'expediente'
   const [pacienteActivoId, setPacienteActivoId] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [citaActivaParaConsulta, setCitaActivaParaConsulta] = useState(null);
@@ -78,9 +75,9 @@ export default function App() {
   const fetchData = async () => {
     try {
       const [resCitas, resDocs, resConfig] = await Promise.all([
-        axios.get(`/citas`),
-        axios.get(`/doctores`),
-        axios.get(`/configuracion`)
+        api.get('/api/citas'),
+        api.get('/api/doctores'),
+        api.get('/api/configuracion')
       ]);
       setCitas(resCitas.data || []);
       setDoctores(resDocs.data || []);
@@ -168,35 +165,35 @@ export default function App() {
   };
 
   // Abrir modal de cita con los datos precargados de un paciente existente
-const abrirCitaParaPaciente = (paciente) => {
-  setSelectedId(null);
-  const primerDoc = doctores[0] || {};
-  const hoyStr = new Date().toISOString().split('T')[0];
+  const abrirCitaParaPaciente = (paciente) => {
+    setSelectedId(null);
+    const primerDoc = doctores[0] || {};
+    const hoyStr = new Date().toISOString().split('T')[0];
 
-  setForm({
-    paciente_id: paciente.id,
-    paciente_nombre: paciente.nombre || '',
-    paciente_telefono: paciente.telefono || '',
-    doctor_id: primerDoc.id || '',
-    doctor_nombre: primerDoc.nombre || '',
-    fecha_cita: hoyStr,
-    hora_cita: config.hora_apertura ? config.hora_apertura.slice(0, 5) : '08:00',
-    duracion_minutos: config.duracion_defecto_minutos || 30,
-    indicaciones: '',
-    estado: 'RESERVADA'
-  });
+    setForm({
+      paciente_id: paciente.id,
+      paciente_nombre: paciente.nombre || '',
+      paciente_telefono: paciente.telefono || '',
+      doctor_id: primerDoc.id || '',
+      doctor_nombre: primerDoc.nombre || '',
+      fecha_cita: hoyStr,
+      hora_cita: config.hora_apertura ? config.hora_apertura.slice(0, 5) : '08:00',
+      duracion_minutos: config.duracion_defecto_minutos || 30,
+      indicaciones: '',
+      estado: 'RESERVADA'
+    });
 
-  setIsModalOpen(true);
-};
+    setIsModalOpen(true);
+  };
 
   const handleCitaSubmit = async (e, abrirRecetaInmediata) => {
     e.preventDefault();
     try {
       if (selectedId) {
-        await axios.put(`/citas/${selectedId}`, form);
+        await api.put(`/api/citas/${selectedId}`, form);
         setIsModalOpen(false);
       } else {
-        const res = await axios.post(`/citas`, form);
+        const res = await api.post(`/api/citas`, form);
         setIsModalOpen(false);
         if (abrirRecetaInmediata) {
           setCitaParaReceta({ ...form, id: res.data.id });
@@ -212,7 +209,7 @@ const abrirCitaParaPaciente = (paciente) => {
   const handleCitaDelete = async () => {
     if (!window.confirm('¿Seguro que deseas eliminar esta cita?')) return;
     try {
-      await axios.delete(`/citas/${selectedId}`);
+      await api.delete(`/api/citas/${selectedId}`);
       setIsModalOpen(false);
       fetchData();
     } catch (err) {
@@ -226,7 +223,7 @@ const abrirCitaParaPaciente = (paciente) => {
     if (!window.confirm(`¿Bloquear jornada del ${emergenciaForm.fecha} para ${doc?.nombre} y notificar a sus pacientes?`)) return;
 
     try {
-      await axios.post(`/doctores/bloquear-fecha`, emergenciaForm);
+      await api.post(`/api/doctores/bloquear-fecha`, emergenciaForm);
       alert('Jornada bloqueada y pacientes notificados.');
       setIsEmergenciaOpen(false);
       fetchData();
@@ -238,13 +235,13 @@ const abrirCitaParaPaciente = (paciente) => {
   return (
     <div className="min-h-screen bg-slate-100 font-sans">
       
-      {/* VISTA 1: EXPEDIENTE CLÍNICO COMPLETO (3 COLUMNAS MEDIS365) */}
+      {/* VISTA 1: EXPEDIENTE CLÍNICO COMPLETO */}
       {vistaActual === 'expediente' ? (
-      <ExpedienteClinicoView
-        pacienteId={pacienteActivoId}
-        onVolver={() => setVistaActual('agenda')}
-        onAgendarCita={(paciente) => abrirCitaParaPaciente(paciente)}
-      />
+        <ExpedienteClinicoView
+          pacienteId={pacienteActivoId}
+          onVolver={() => setVistaActual('agenda')}
+          onAgendarCita={(paciente) => abrirCitaParaPaciente(paciente)}
+        />
       ) : (
         /* VISTA 2: LAYOUT GLOBAL CON SIDEBAR PARA AGENDA Y CATÁLOGO */
         <MainLayout
@@ -267,7 +264,7 @@ const abrirCitaParaPaciente = (paciente) => {
               onNuevoPaciente={() => setIsModalOpen(true)}
             />
           ) : (
-            /* VISTA DE AGENDA / CALENDARIO EMBEBIDA EN EL ÁREA CENTRAL */
+            /* VISTA DE AGENDA / CALENDARIO */
             <div className="flex-1 flex flex-col h-full overflow-y-auto p-6">
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
                 
@@ -352,9 +349,7 @@ const abrirCitaParaPaciente = (paciente) => {
         </MainLayout>
       )}
 
-      {/* ========================================================= */}
-      {/* MODALES FLOTANTES GLOBALES                                */}
-      {/* ========================================================= */}
+      {/* MODALES FLOTANTES GLOBALES */}
       <SelectorFechaModal
         isOpen={isSelectorFechaOpen}
         onClose={() => setIsSelectorFechaOpen(false)}
