@@ -20,7 +20,7 @@ import CatalogoPacientesView from './components/CatalogoPacientesView';
 import ConsultaMedicaView from './components/ConsultaMedicaView';
 
 const API_URL = `/api`;
-import api from '../api';
+import api from '/api';
 
 const STATUS_COLORS = {
   RESERVADA: { bg: '#F59E0B', border: '#D97706' },
