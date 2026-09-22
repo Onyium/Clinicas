@@ -14,7 +14,7 @@ export default function ConfigModal({ isOpen, onClose, onSaved }) {
 
   useEffect(() => {
     if (isOpen) {
-      axios.get(`${API_URL}/configuracion`).then(res => {
+      axios.get(`/configuracion`).then(res => {
         if (res.data) {
           setConfig({
             ...res.data,
@@ -32,7 +32,7 @@ export default function ConfigModal({ isOpen, onClose, onSaved }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.put(`${API_URL}/configuracion`, config);
+      await axios.put(`/configuracion`, config);
       onSaved(config);
       onClose();
     } catch (err) {

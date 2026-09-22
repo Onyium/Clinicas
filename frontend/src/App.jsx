@@ -19,8 +19,8 @@ import ExpedienteClinicoView from './components/ExpedienteClinicoView';
 import CatalogoPacientesView from './components/CatalogoPacientesView';
 import ConsultaMedicaView from './components/ConsultaMedicaView';
 
-const API_URL = `/api`;
-import api from '/api';
+import api from 'C:\Users\admin\CLINICA-BOT\frontend\src\api.js';
+
 
 const STATUS_COLORS = {
   RESERVADA: { bg: '#F59E0B', border: '#D97706' },
@@ -78,9 +78,9 @@ export default function App() {
   const fetchData = async () => {
     try {
       const [resCitas, resDocs, resConfig] = await Promise.all([
-        axios.get(`${API_URL}/citas`),
-        axios.get(`${API_URL}/doctores`),
-        axios.get(`${API_URL}/configuracion`)
+        axios.get(`/citas`),
+        axios.get(`/doctores`),
+        axios.get(`/configuracion`)
       ]);
       setCitas(resCitas.data || []);
       setDoctores(resDocs.data || []);
@@ -193,10 +193,10 @@ const abrirCitaParaPaciente = (paciente) => {
     e.preventDefault();
     try {
       if (selectedId) {
-        await axios.put(`${API_URL}/citas/${selectedId}`, form);
+        await axios.put(`/citas/${selectedId}`, form);
         setIsModalOpen(false);
       } else {
-        const res = await axios.post(`${API_URL}/citas`, form);
+        const res = await axios.post(`/citas`, form);
         setIsModalOpen(false);
         if (abrirRecetaInmediata) {
           setCitaParaReceta({ ...form, id: res.data.id });
@@ -212,7 +212,7 @@ const abrirCitaParaPaciente = (paciente) => {
   const handleCitaDelete = async () => {
     if (!window.confirm('¿Seguro que deseas eliminar esta cita?')) return;
     try {
-      await axios.delete(`${API_URL}/citas/${selectedId}`);
+      await axios.delete(`/citas/${selectedId}`);
       setIsModalOpen(false);
       fetchData();
     } catch (err) {
@@ -226,7 +226,7 @@ const abrirCitaParaPaciente = (paciente) => {
     if (!window.confirm(`¿Bloquear jornada del ${emergenciaForm.fecha} para ${doc?.nombre} y notificar a sus pacientes?`)) return;
 
     try {
-      await axios.post(`${API_URL}/doctores/bloquear-fecha`, emergenciaForm);
+      await axios.post(`/doctores/bloquear-fecha`, emergenciaForm);
       alert('Jornada bloqueada y pacientes notificados.');
       setIsEmergenciaOpen(false);
       fetchData();

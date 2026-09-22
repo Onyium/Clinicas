@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import api from '../api';
 
 export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarCita }) {
   const [data, setData] = useState(null);
