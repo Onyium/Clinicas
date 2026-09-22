@@ -52,7 +52,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
     if (!pacienteId) return;
     setLoading(true);
     try {
-      const res = await axios.get(`http://localhost:3001/api/pacientes/${pacienteId}`);
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/pacientes/${pacienteId}`);
       setData(res.data);
 
       const p = res.data?.paciente;
@@ -140,14 +140,14 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
 
       if (modoEditar && consultaSeleccionada) {
         // Actualizar consulta existente
-        await axios.put(`http://localhost:3001/api/consultas-independientes/${consultaSeleccionada.id}`, {
+        await axios.put(`${import.meta.env.VITE_API_URL}/api/consultas-independientes/${consultaSeleccionada.id}`, {
           ...formConsulta,
           medicamentos: listaMedicamentosValidos
         });
         alert('✅ Consulta y receta actualizadas correctamente.');
       } else {
         // Crear nueva consulta
-        const res = await axios.post('http://localhost:3001/api/consultas-independientes', {
+        const res = await axios.post('${import.meta.env.VITE_API_URL}/api/consultas-independientes', {
           paciente_id: pacienteId,
           ...formConsulta,
           medicamentos: listaMedicamentosValidos
@@ -156,7 +156,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
         const nuevaConsultaId = res.data.id;
         if (listaEstudiosValidos.length > 0 && nuevaConsultaId) {
           for (const est of listaEstudiosValidos) {
-            await axios.post('http://localhost:3001/api/estudios-clinicos', {
+            await axios.post('${import.meta.env.VITE_API_URL}/api/estudios-clinicos', {
               consulta_id: nuevaConsultaId,
               paciente_id: pacienteId,
               ...est
@@ -184,7 +184,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
     e.preventDefault();
     if (!consultaSeleccionada) return;
     try {
-      await axios.post('http://localhost:3001/api/estudios-clinicos', {
+      await axios.post('${import.meta.env.VITE_API_URL}/api/estudios-clinicos', {
         consulta_id: consultaSeleccionada.id,
         paciente_id: pacienteId,
         ...formEstudioRapido
@@ -203,7 +203,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
   const handleEliminarEstudio = async (estudioId) => {
     if (!window.confirm('¿Desea eliminar este estudio clínico?')) return;
     try {
-      await axios.delete(`http://localhost:3001/api/estudios-clinicos/${estudioId}`);
+      await axios.delete(`${import.meta.env.VITE_API_URL}/api/estudios-clinicos/${estudioId}`);
       await cargarExpediente();
     } catch (err) {
       console.error(err);
@@ -219,7 +219,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
     }
 
     try {
-      await axios.delete(`http://localhost:3001/api/consultas-independientes/${consultaSeleccionada.id}`);
+      await axios.delete(`${import.meta.env.VITE_API_URL}/api/consultas-independientes/${consultaSeleccionada.id}`);
       alert('🗑️ Consulta eliminada con éxito.');
       setConsultaSeleccionada(null);
       await cargarExpediente();
@@ -262,7 +262,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
     e.preventDefault();
     setGuardandoGeneral(true);
     try {
-      await axios.post('http://localhost:3001/api/pacientes', {
+      await axios.post('${import.meta.env.VITE_API_URL}/api/pacientes', {
         id: pacienteId,
         ...formGeneral
       });

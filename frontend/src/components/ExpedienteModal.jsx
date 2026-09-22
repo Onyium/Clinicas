@@ -17,7 +17,7 @@ export default function ExpedienteModal({ isOpen, onClose, pacienteId }) {
     if (!pacienteId) return;
     setLoading(true);
     try {
-      const res = await axios.get(`http://localhost:3001/api/pacientes/${pacienteId}`);
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/pacientes/${pacienteId}`);
       setData(res.data);
       setForm({
         alergias: res.data.paciente.alergias || 'Ninguna',
@@ -43,7 +43,7 @@ export default function ExpedienteModal({ isOpen, onClose, pacienteId }) {
   const handleGuardarDatosClinicos = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:3001/api/pacientes', {
+      await axios.post('${import.meta.env.VITE_API_URL}/api/pacientes', {
         nombre: data.paciente.nombre,
         telefono: data.paciente.telefono,
         ...form

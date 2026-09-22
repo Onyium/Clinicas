@@ -9,7 +9,7 @@ export default function PacientesDirectorioModal({ isOpen, onClose, onSelectPaci
   const fetchPacientes = async (query = '') => {
     setLoading(true);
     try {
-      const res = await axios.get(`http://localhost:3001/api/pacientes?q=${encodeURIComponent(query)}`);
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/pacientes?q=${encodeURIComponent(query)}`);
       setPacientes(res.data || []);
     } catch (err) {
       console.error(err);
