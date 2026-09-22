@@ -19,7 +19,7 @@ import ExpedienteClinicoView from './components/ExpedienteClinicoView';
 import CatalogoPacientesView from './components/CatalogoPacientesView';
 import ConsultaMedicaView from './components/ConsultaMedicaView';
 
-import api from 'C:/Users/admin/CLINICA-BOT/frontend/src/api.js';
+import api from './api';
 
 
 const STATUS_COLORS = {
