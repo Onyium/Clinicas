@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import api from '../api';
 
 export default function CatalogoPacientesView({ 
@@ -16,7 +15,7 @@ export default function CatalogoPacientesView({
   const cargarPacientes = async (query = '') => {
     setLoading(true);
     try {
-      const res = await axios.get(`/api/pacientes?q=${encodeURIComponent(query)}`);
+      const res = await api.get(`/api/pacientes?q=${encodeURIComponent(query)}`);
       setPacientes(res.data || []);
     } catch (err) {
       console.error('Error al cargar catálogo de pacientes:', err);
@@ -92,6 +91,7 @@ export default function CatalogoPacientesView({
           <span className="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
             {pacientesFiltrados.length} expedientes
           </span>
+
         </div>
       </div>
 
@@ -173,9 +173,8 @@ export default function CatalogoPacientesView({
                   </span>
                 </div>
 
-                {/* Botones de Acción Rápidos (Estilo Medis / DAR) */}
+                {/* Botones de Acción Rápidos */}
                 <div className="flex items-center gap-2 shrink-0">
-                  {/* Botón Verde: Nueva Nota */}
                   <button 
                     onClick={() => onNuevaNota(p)}
                     className="bg-[#20ba7e] hover:bg-[#199967] text-white text-xs font-bold px-3 py-2 rounded-xl transition shadow-2xs flex items-center gap-1.5"
@@ -183,7 +182,6 @@ export default function CatalogoPacientesView({
                     📝 Nueva Nota
                   </button>
 
-                  {/* Botón Teal: Ver Expediente Completo */}
                   <button 
                     onClick={() => onVerExpediente(p.id)}
                     className="bg-[#008f85] hover:bg-[#00746c] text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-2xs flex items-center gap-1.5"
