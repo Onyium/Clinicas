@@ -226,6 +226,22 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
     }
   };
 
+  // NUEVO: Función para eliminar el expediente completo del paciente
+  const handleEliminarExpediente = async () => {
+    if (!window.confirm('⚠️ ¿Estás COMPLETAMENTE SEGURO de eliminar este expediente? Se borrarán todas sus consultas, recetas, estudios y citas asociadas. Esta acción no se puede deshacer.')) {
+      return;
+    }
+
+    try {
+      await api.delete(`/api/pacientes/${pacienteId}`);
+      alert('🗑️ Expediente eliminado correctamente.');
+      onVolver(); // Regresa al catálogo o a la agenda principal
+    } catch (err) {
+      console.error('Error al eliminar expediente:', err);
+      alert('Error al intentar eliminar el expediente.');
+    }
+  };
+
   // Preparar formulario para editar la consulta actual
   const activarModoEdicion = () => {
     if (!consultaSeleccionada) return;
@@ -382,6 +398,16 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
             <p className="text-[11px] bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-slate-600">
               {paciente.antecedentes || 'Sin antecedentes patológicos registrados.'}
             </p>
+
+            {/* NUEVO: Botón de eliminar expediente completo */}
+            <div className="pt-3">
+              <button
+                onClick={handleEliminarExpediente}
+                className="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold py-2 px-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+              >
+                🗑️ Eliminar Expediente
+              </button>
+            </div>
           </div>
         </aside>
 
