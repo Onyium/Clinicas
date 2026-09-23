@@ -659,6 +659,11 @@ app.delete('/api/estudios-clinicos/:id', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+app.get('/api/ping', (req, res) => {
+  res.status(200).send('pong');
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor backend escuchando en http://localhost:${PORT}`);
