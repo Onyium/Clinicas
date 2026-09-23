@@ -321,18 +321,20 @@ app.get('/api/pacientes', async (req, res) => {
 
 // 2. CREAR O ACTUALIZAR PACIENTE
 app.post('/api/pacientes', async (req, res) => {
-  const {
-    id,
-    nombre,
-    telefono,
-    fecha_nacimiento,
-    sexo,
-    alergias,
-    antecedentes,
-    contacto_emergencia,
-    telefono_emergencia,
-    notas_generales
-  } = req.body;
+  // En POST /api/pacientes de tu server.js:
+const {
+  id,
+  nombre,
+  telefono,
+  fecha_nacimiento,
+  sexo,
+  alergias,
+  antecedentes,
+  contacto_emergencia,
+  telefono_emergencia,
+  notas_generales,
+  foto_url // <--- Añadir aquí
+} = req.body;
 
   if (!nombre || !telefono) {
     return res.status(400).json({ error: 'Nombre y teléfono son obligatorios' });
