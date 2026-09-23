@@ -346,24 +346,24 @@ const {
         `UPDATE pacientes SET 
            nombre = ?, telefono = ?, fecha_nacimiento = ?, sexo = ?, 
            alergias = ?, antecedentes = ?, contacto_emergencia = ?, 
-           telefono_emergencia = ?, notas_generales = ?
+           telefono_emergencia = ?, notas_generales = ?, foto_url = ?
          WHERE id = ?`,
         [
           nombre, telefono, fecha_nacimiento || null, sexo || 'Otro',
           alergias || 'Ninguna', antecedentes || null, contacto_emergencia || null,
-          telefono_emergencia || null, notas_generales || null, id
+          telefono_emergencia || null, notas_generales || null, foto_url || null, id
         ]
       );
       return res.json({ ok: true, id, mensaje: 'Paciente actualizado con éxito' });
     } else {
       const [result] = await pool.query(
         `INSERT INTO pacientes 
-         (nombre, telefono, fecha_nacimiento, sexo, alergias, antecedentes, contacto_emergencia, telefono_emergencia, notas_generales)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (nombre, telefono, fecha_nacimiento, sexo, alergias, antecedentes, contacto_emergencia, telefono_emergencia, notas_generales, foto_url)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           nombre, telefono, fecha_nacimiento || null, sexo || 'Otro',
           alergias || 'Ninguna', antecedentes || null, contacto_emergencia || null,
-          telefono_emergencia || null, notas_generales || null
+          telefono_emergencia || null, notas_generales || null, foto_url || null
         ]
       );
       return res.json({ ok: true, id: result.insertId, mensaje: 'Paciente creado con éxito' });
