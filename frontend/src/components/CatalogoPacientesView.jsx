@@ -50,7 +50,7 @@ export default function CatalogoPacientesView({
         <div className="flex items-center gap-2.5">
           <button
             onClick={onNuevoPaciente}
-            className="bg-[#10a37f] hover:bg-[#0e8a6c] text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs flex items-center gap-1.5 transition"
+            className="bg-[#10a37f] hover:bg-[#0e8a6c] text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs flex items-center gap-1.5 transition cursor-pointer"
           >
             ➕ Nuevo Paciente
           </button>
@@ -70,7 +70,7 @@ export default function CatalogoPacientesView({
           {busqueda && (
             <button
               onClick={() => setBusqueda('')}
-              className="absolute right-3 top-2 text-xs text-slate-400 hover:text-slate-600"
+              className="absolute right-3 top-2 text-xs text-slate-400 hover:text-slate-600 cursor-pointer"
             >
               ✕
             </button>
@@ -81,7 +81,7 @@ export default function CatalogoPacientesView({
           <select
             value={filtroGenero}
             onChange={(e) => setFiltroGenero(e.target.value)}
-            className="border border-slate-300 text-slate-600 rounded-xl px-3 py-1.5 text-xs font-semibold bg-white outline-none focus:ring-2 focus:ring-blue-500"
+            className="border border-slate-300 text-slate-600 rounded-xl px-3 py-1.5 text-xs font-semibold bg-white outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
           >
             <option value="TODOS">Todos los géneros</option>
             <option value="M">Masculino</option>
@@ -107,7 +107,7 @@ export default function CatalogoPacientesView({
             <p className="text-xs text-slate-400 mt-1">Intenta con otro término de búsqueda o registra uno nuevo.</p>
             <button
               onClick={onNuevoPaciente}
-              className="mt-4 bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-blue-700 transition"
+              className="mt-4 bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-blue-700 transition cursor-pointer"
             >
               + Registrar Paciente
             </button>
@@ -125,10 +125,18 @@ export default function CatalogoPacientesView({
               >
                 {/* Info Izquierda */}
                 <div className="flex items-center gap-4">
-                  {/* Avatar con Inicial */}
-                  <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-700 font-black text-lg shrink-0">
-                    {inicial}
-                  </div>
+                  {/* Avatar con Foto URL o Inicial por defecto */}
+                  {p.foto_url ? (
+                    <img 
+                      src={p.foto_url} 
+                      alt={p.nombre} 
+                      className="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0" 
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-700 font-black text-lg shrink-0">
+                      {inicial}
+                    </div>
+                  )}
 
                   <div>
                     <h3 className="text-sm font-black text-slate-800 leading-tight">
@@ -177,14 +185,14 @@ export default function CatalogoPacientesView({
                 <div className="flex items-center gap-2 shrink-0">
                   <button 
                     onClick={() => onNuevaNota(p)}
-                    className="bg-[#20ba7e] hover:bg-[#199967] text-white text-xs font-bold px-3 py-2 rounded-xl transition shadow-2xs flex items-center gap-1.5"
+                    className="bg-[#20ba7e] hover:bg-[#199967] text-white text-xs font-bold px-3 py-2 rounded-xl transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
                   >
                     📝 Nueva Nota
                   </button>
 
                   <button 
                     onClick={() => onVerExpediente(p.id)}
-                    className="bg-[#008f85] hover:bg-[#00746c] text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-2xs flex items-center gap-1.5"
+                    className="bg-[#008f85] hover:bg-[#00746c] text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
                   >
                     📂 Ver Expediente
                   </button>
