@@ -33,7 +33,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
   const [mostrarModalEstudio, setMostrarModalEstudio] = useState(false);
   const [formEstudioRapido, setFormEstudioRapido] = useState({ tipo_estudio: '', laboratorio: '', observaciones: '' });
 
-  // Datos Generales del paciente (Ficha)
+  // Datos Generales del paciente (Ficha) con soporte para foto_url
   const [formGeneral, setFormGeneral] = useState({
     nombre: '',
     telefono: '',
@@ -42,7 +42,8 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
     alergias: '',
     antecedentes: '',
     contacto_emergencia: '',
-    telefono_emergencia: ''
+    telefono_emergencia: '',
+    foto_url: ''
   });
 
   const [guardando, setGuardando] = useState(false);
@@ -65,7 +66,8 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
           alergias: p.alergias || '',
           antecedentes: p.antecedentes || '',
           contacto_emergencia: p.contacto_emergencia || '',
-          telefono_emergencia: p.telefono_emergencia || ''
+          telefono_emergencia: p.telefono_emergencia || '',
+          foto_url: p.foto_url || ''
         });
       }
 
@@ -226,7 +228,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
     }
   };
 
-  // NUEVO: Función para eliminar el expediente completo del paciente
+  // Función para eliminar el expediente completo del paciente
   const handleEliminarExpediente = async () => {
     if (!window.confirm('⚠️ ¿Estás COMPLETAMENTE SEGURO de eliminar este expediente? Se borrarán todas sus consultas, recetas, estudios y citas asociadas. Esta acción no se puede deshacer.')) {
       return;
@@ -235,7 +237,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
     try {
       await api.delete(`/api/pacientes/${pacienteId}`);
       alert('🗑️ Expediente eliminado correctamente.');
-      onVolver(); // Regresa al catálogo o a la agenda principal
+      onVolver(); 
     } catch (err) {
       console.error('Error al eliminar expediente:', err);
       alert('Error al intentar eliminar el expediente.');
@@ -270,7 +272,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
     setModoCrear(false);
   };
 
-  // Guardar cambios en datos generales
+  // Guardar cambios en datos generales (incluyendo foto_url)
   const handleGuardarGeneral = async (e) => {
     e.preventDefault();
     setGuardandoGeneral(true);
@@ -336,9 +338,19 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
         {/* ================= COLUMNA IZQUIERDA: PERFIL DEL PACIENTE ================= */}
         <aside className="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0 overflow-y-auto">
           <div className="p-4 flex flex-col items-center text-center border-b border-slate-100">
-            <div className="w-16 h-16 rounded-full bg-blue-50 border-2 border-blue-200 flex items-center justify-center text-2xl font-black text-blue-700 shadow-inner mb-2">
-              {paciente.nombre?.charAt(0) || 'P'}
-            </div>
+            {/* Avatar con Foto URL o Inicial por defecto */}
+            {paciente.foto_url ? (
+              <img 
+                src={paciente.foto_url} 
+                alt={paciente.nombre} 
+                className="w-16 h-16 rounded-full object-cover border-2 border-blue-200 shadow-inner mb-2" 
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-blue-50 border-2 border-blue-200 flex items-center justify-center text-2xl font-black text-blue-700 shadow-inner mb-2">
+                {paciente.nombre?.charAt(0) || 'P'}
+              </div>
+            )}
+
             <h2 className="text-sm font-black text-slate-800 uppercase tracking-tight">
               {paciente.nombre}
             </h2>
@@ -399,7 +411,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
               {paciente.antecedentes || 'Sin antecedentes patológicos registrados.'}
             </p>
 
-            {/* NUEVO: Botón de eliminar expediente completo */}
+            {/* Botón de eliminar expediente completo */}
             <div className="pt-3">
               <button
                 onClick={handleEliminarExpediente}
@@ -740,7 +752,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
               )
             )}
 
-            {/* VISTA 2: DATOS GENERALES */}
+            {/* VISTA 2: DATOS GENERALES (CON CAMPO DE FOTO URL) */}
             {seccionActiva === 'general' && (
               <form onSubmit={handleGuardarGeneral} className="space-y-4 max-w-2xl">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -786,6 +798,17 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                       <option value="Otro">Otro</option>
                     </select>
                   </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">URL de la Foto de Perfil (Opcional)</label>
+                  <input
+                    type="url"
+                    placeholder="https://ejemplo.com/foto-paciente.jpg"
+                    value={formGeneral.foto_url}
+                    onChange={(e) => setFormGeneral({ ...formGeneral, foto_url: e.target.value })}
+                    className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:border-blue-500 font-mono"
+                  />
                 </div>
 
                 <div>
