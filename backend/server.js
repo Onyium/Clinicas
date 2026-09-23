@@ -372,6 +372,31 @@ app.post('/api/pacientes', async (req, res) => {
   }
 });
 
+// Eliminar un paciente completo y todo su historial clínico
+app.delete('/api/pacientes/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Opcional: Eliminar recetas, estudios y consultas asociadas para evitar errores de llave foránea
+    await pool.query('DELETE FROM tomas_medicamentos WHERE receta_id IN (SELECT id FROM recetas_medicamentos WHERE paciente_id = ?)', [id]);
+    await pool.query('DELETE FROM recetas_medicamentos WHERE paciente_id = ?', [id]);
+    await pool.query('DELETE FROM estudios_clinicos WHERE paciente_id = ?', [id]);
+    await pool.query('DELETE FROM consultas_medicas WHERE paciente_id = ?', [id]);
+    await pool.query('DELETE FROM citas WHERE paciente_id = ?', [id]);
+    
+    // Finalmente, eliminar al paciente
+    const [result] = await pool.query('DELETE FROM pacientes WHERE id = ?', [id]);
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Paciente no encontrado' });
+    }
+
+    res.json({ ok: true, mensaje: 'Expediente y paciente eliminados correctamente' });
+  } catch (err) {
+    console.error('Error al eliminar paciente:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 3. REGISTRAR CONSULTA MÉDICA INDEPENDIENTE CON RECETA
 app.post('/api/consultas-independientes', async (req, res) => {
   const {
