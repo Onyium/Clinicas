@@ -10,7 +10,8 @@ import ConfigModal from './components/ConfigModal';
 import RecetaModal from './components/RecetaModal';
 import DiaDetalleModal from './components/DiaDetalleModal';
 import MainLayout from './components/MainLayout';
-import SelectorFechaModal from './components/SelectorFechaModal';
+// Importamos tu nuevo modal y quitamos el SelectorFechaModal
+import NuevoPacienteModal from './components/NuevoPacienteModal';
 import ExpedienteModal from './components/ExpedienteModal';
 import PacientesDirectorioModal from './components/PacientesDirectorioModal';
 import ExpedienteClinicoView from './components/ExpedienteClinicoView';
@@ -44,7 +45,9 @@ export default function App() {
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isRecetaOpen, setIsRecetaOpen] = useState(false);
   const [isDiaModalOpen, setIsDiaModalOpen] = useState(false);
-  const [isSelectorFechaOpen, setIsSelectorFechaOpen] = useState(false);
+  // Nuevo estado para el modal de pacientes
+  const [isNuevoPacienteModalOpen, setIsNuevoPacienteModalOpen] = useState(false);
+  
   const [directorioAbierto, setDirectorioAbierto] = useState(false);
   const [expedienteSeleccionadoId, setExpedienteSeleccionadoId] = useState(null);
   const [diaSeleccionado, setDiaSeleccionado] = useState('');
@@ -117,7 +120,6 @@ export default function App() {
     };
   });
 
-  // Abrir formulario con fecha elegida desde el minicalendario o desde el día
   const abrirFormularioConFecha = (fecha) => {
     setSelectedId(null);
     const primerDoc = doctores[0] || {};
@@ -244,11 +246,11 @@ export default function App() {
         />
       ) : (
         /* VISTA 2: LAYOUT GLOBAL CON SIDEBAR PARA AGENDA Y CATÁLOGO */
+        /* Eliminamos la prop onNuevaCita para que desaparezca el botón genérico de Agendar Cita del menú lateral */
         <MainLayout
           vistaActual={vistaActual}
           setVistaActual={setVistaActual}
           nombreClinica={config.nombre_clinica}
-          onNuevaCita={() => setIsSelectorFechaOpen(true)}
         >
           {vistaActual === 'catalogo' ? (
             <CatalogoPacientesView 
@@ -261,26 +263,8 @@ export default function App() {
                 setVistaActual('expediente');
               }}
               onIrAgenda={() => setVistaActual('agenda')}
-              
-              // ==========================================
-              // AQUÍ ESTÁ EL CAMBIO PARA CREAR EXPEDIENTES
-              // ==========================================
-              onNuevoPaciente={async () => {
-                try {
-                  const res = await api.post('/api/pacientes', {
-                    nombre: 'Nuevo Paciente (Borrador)',
-                    telefono: '00000000',
-                    sexo: 'Otro'
-                  });
-                  const nuevoId = res.data.id;
-                  setPacienteActivoId(nuevoId);
-                  setVistaActual('expediente');
-                } catch (err) {
-                  console.error(err);
-                  alert('Error creando expediente. Revisa la consola.');
-                }
-              }}
-              // ==========================================
+              // AQUÍ ACTIVAMOS TU NUEVO MODAL DE PACIENTES
+              onNuevoPaciente={() => setIsNuevoPacienteModalOpen(true)}
             />
           ) : (
             /* VISTA DE AGENDA / CALENDARIO */
@@ -311,7 +295,7 @@ export default function App() {
                       {busqueda && (
                         <button
                           onClick={() => setBusqueda('')}
-                          className="absolute right-2.5 top-1.5 text-xs text-slate-400 hover:text-slate-600"
+                          className="absolute right-2.5 top-1.5 text-xs text-slate-400 hover:text-slate-600 cursor-pointer"
                         >
                           ✕
                         </button>
@@ -322,7 +306,7 @@ export default function App() {
                     <select
                       value={filtroDoctor}
                       onChange={(e) => setFiltroDoctor(e.target.value)}
-                      className="border rounded-xl px-2.5 py-1.5 text-xs bg-white text-slate-700 outline-none font-medium"
+                      className="border rounded-xl px-2.5 py-1.5 text-xs bg-white text-slate-700 outline-none font-medium cursor-pointer"
                     >
                       <option value="TODOS">Todos los servicios</option>
                       {doctores.map(d => (
@@ -332,14 +316,14 @@ export default function App() {
 
                     <button
                       onClick={() => setIsEmergenciaOpen(true)}
-                      className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition"
+                      className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition cursor-pointer"
                     >
                       🚨 Bloquear Día
                     </button>
 
                     <button
                       onClick={() => setIsConfigOpen(true)}
-                      className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition"
+                      className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
                     >
                       ⚙️
                     </button>
@@ -369,10 +353,17 @@ export default function App() {
       )}
 
       {/* MODALES FLOTANTES GLOBALES */}
-      <SelectorFechaModal
-        isOpen={isSelectorFechaOpen}
-        onClose={() => setIsSelectorFechaOpen(false)}
-        onFechaSeleccionada={abrirFormularioConFecha}
+      
+      {/* NUEVO MODAL DE PACIENTE */}
+      <NuevoPacienteModal
+        isOpen={isNuevoPacienteModalOpen}
+        onClose={() => setIsNuevoPacienteModalOpen(false)}
+        onPacienteCreado={(nuevoId) => {
+          // Cierra el modal y manda a la tía directo a la ficha del expediente
+          setIsNuevoPacienteModalOpen(false);
+          setPacienteActivoId(nuevoId);
+          setVistaActual('expediente');
+        }}
       />
 
       <DiaDetalleModal
