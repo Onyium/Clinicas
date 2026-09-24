@@ -573,7 +573,7 @@ app.get('/api/pacientes/:id', async (req, res) => {
     const [consultas] = await pool.query(
       `SELECT id, DATE_FORMAT(fecha, '%Y-%m-%d %H:%i') as fecha_formateada, 
               doctor_nombre, motivo_consulta, enfermedad_actual, 
-              antecedentes_patologicos, diagnostico, plan_tratamiento, fecha
+              antecedentes_patologicos,examen_fisico, reporte_examenes, diagnostico, plan_tratamiento, fecha
        FROM consultas_medicas 
        WHERE paciente_id = ? 
        ORDER BY fecha DESC`,
