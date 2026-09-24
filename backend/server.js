@@ -407,6 +407,8 @@ app.post('/api/consultas-independientes', async (req, res) => {
     motivo_consulta,
     enfermedad_actual,
     antecedentes_patologicos,
+    examen_fisico,         // <--- NUEVO CAMPO
+    reporte_examenes,      // <--- NUEVO CAMPO
     diagnostico,
     plan_tratamiento,
     medicamentos
@@ -419,14 +421,16 @@ app.post('/api/consultas-independientes', async (req, res) => {
   try {
     const [result] = await pool.query(
       `INSERT INTO consultas_medicas 
-       (paciente_id, doctor_nombre, motivo_consulta, enfermedad_actual, antecedentes_patologicos, diagnostico, plan_tratamiento)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+       (paciente_id, doctor_nombre, motivo_consulta, enfermedad_actual, antecedentes_patologicos, examen_fisico, reporte_examenes, diagnostico, plan_tratamiento)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         paciente_id,
         doctor_nombre || 'Dr(a). Consulta',
         motivo_consulta || 'Control / Consulta',
         enfermedad_actual || null,
         antecedentes_patologicos || null,
+        examen_fisico || null,       // <--- NUEVO CAMPO
+        reporte_examenes || null,    // <--- NUEVO CAMPO
         diagnostico || null,
         plan_tratamiento || null
       ]
@@ -471,13 +475,16 @@ app.post('/api/consultas-independientes', async (req, res) => {
   }
 });
 
-// 4. ACTUALIZAR CONSULTA INDEPENDIENTE (NUEVO)
+// 4. ACTUALIZAR CONSULTA INDEPENDIENTE
 app.put('/api/consultas-independientes/:id', async (req, res) => {
   const { id } = req.params;
   const {
+    doctor_nombre,         // <--- Aseguramos que venga el doctor también
     motivo_consulta,
     enfermedad_actual,
     antecedentes_patologicos,
+    examen_fisico,         // <--- NUEVO CAMPO
+    reporte_examenes,      // <--- NUEVO CAMPO
     diagnostico,
     plan_tratamiento,
     medicamentos
@@ -486,13 +493,16 @@ app.put('/api/consultas-independientes/:id', async (req, res) => {
   try {
     await pool.query(
       `UPDATE consultas_medicas 
-       SET motivo_consulta = ?, enfermedad_actual = ?, antecedentes_patologicos = ?, 
-           diagnostico = ?, plan_tratamiento = ?
+       SET doctor_nombre = COALESCE(?, doctor_nombre), motivo_consulta = ?, enfermedad_actual = ?, antecedentes_patologicos = ?, 
+           examen_fisico = ?, reporte_examenes = ?, diagnostico = ?, plan_tratamiento = ?
        WHERE id = ?`,
       [
+        doctor_nombre || null,
         motivo_consulta || null,
         enfermedad_actual || null,
         antecedentes_patologicos || null,
+        examen_fisico || null,       // <--- NUEVO CAMPO
+        reporte_examenes || null,    // <--- NUEVO CAMPO
         diagnostico || null,
         plan_tratamiento || null,
         id
@@ -535,10 +545,11 @@ app.put('/api/consultas-independientes/:id', async (req, res) => {
   }
 });
 
-// 5. ELIMINAR CONSULTA INDEPENDIENTE (NUEVO)
+// 5. ELIMINAR CONSULTA INDEPENDIENTE
 app.delete('/api/consultas-independientes/:id', async (req, res) => {
   const { id } = req.params;
   try {
+    await pool.query('DELETE FROM estudios_clinicos WHERE consulta_id = ?', [id]); // <--- Limpieza en cascada extra
     await pool.query('DELETE FROM recetas_medicamentos WHERE consulta_id = ?', [id]);
     await pool.query('DELETE FROM consultas_medicas WHERE id = ?', [id]);
     res.json({ ok: true, mensaje: 'Consulta eliminada del expediente' });
