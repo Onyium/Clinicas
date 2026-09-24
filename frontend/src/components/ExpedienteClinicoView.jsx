@@ -8,16 +8,22 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
   const [loading, setLoading] = useState(true);
   const [seccionActiva, setSeccionActiva] = useState('inicio'); 
   
-  // NUEVO ESTADO PARA LAS PESTAÑAS TIPO ODOO DENTRO DE LA CONSULTA
-  const [subTab, setSubTab] = useState('historia'); // 'historia' | 'receta' | 'laboratorio'
+  const [subTab, setSubTab] = useState('historia'); 
   
   const [modoCrear, setModoCrear] = useState(false);
   const [modoEditar, setModoEditar] = useState(false);
   const [consultaSeleccionada, setConsultaSeleccionada] = useState(null);
 
+  // ESTADO ACTUALIZADO CON TODOS LOS CAMPOS DE LA IMAGEN
   const [formConsulta, setFormConsulta] = useState({
-    doctor_nombre: 'Dra. Consulta', motivo_consulta: '', enfermedad_actual: '', 
-    antecedentes_patologicos: '', diagnostico: '', plan_tratamiento: ''
+    doctor_nombre: 'Dra. Consulta', 
+    motivo_consulta: '', 
+    enfermedad_actual: '', 
+    antecedentes_patologicos: '', 
+    examen_fisico: '',
+    reporte_examenes: '',
+    diagnostico: '', 
+    plan_tratamiento: ''
   });
 
   const [medicamentos, setMedicamentos] = useState([{ medicamento: '', frecuencia: 'Cada 8 horas', dias_tratamiento: 5, indicacion: '' }]);
@@ -98,7 +104,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
 
       setModoCrear(false);
       setModoEditar(false);
-      setSubTab('historia'); // Regresar a la pestaña principal al guardar
+      setSubTab('historia'); 
       setEstudiosNuevos([{ tipo_estudio: '', laboratorio: '', observaciones: '' }]);
       await cargarExpediente();
     } catch (err) {
@@ -145,9 +151,14 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
   const activarModoEdicion = () => {
     if (!consultaSeleccionada) return;
     setFormConsulta({
-      doctor_nombre: consultaSeleccionada.doctor_nombre || 'Dra. Consulta', motivo_consulta: consultaSeleccionada.motivo_consulta || '',
-      enfermedad_actual: consultaSeleccionada.enfermedad_actual || '', antecedentes_patologicos: consultaSeleccionada.antecedentes_patologicos || '',
-      diagnostico: consultaSeleccionada.diagnostico || '', plan_tratamiento: consultaSeleccionada.plan_tratamiento || ''
+      doctor_nombre: consultaSeleccionada.doctor_nombre || 'Dra. Consulta', 
+      motivo_consulta: consultaSeleccionada.motivo_consulta || '',
+      enfermedad_actual: consultaSeleccionada.enfermedad_actual || '', 
+      antecedentes_patologicos: consultaSeleccionada.antecedentes_patologicos || '',
+      examen_fisico: consultaSeleccionada.examen_fisico || '',
+      reporte_examenes: consultaSeleccionada.reporte_examenes || '',
+      diagnostico: consultaSeleccionada.diagnostico || '', 
+      plan_tratamiento: consultaSeleccionada.plan_tratamiento || ''
     });
     const recs = tratamientos.filter(t => t.consulta_id === consultaSeleccionada.id);
     if (recs.length > 0) {
@@ -231,7 +242,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
             )}
           </div>
 
-          {/* BARRA DE PESTAÑAS INTERNAS TIPO ERP (SOLO EN VISTA DE CONSULTA) */}
+          {/* BARRA DE PESTAÑAS INTERNAS TIPO ERP */}
           {seccionActiva === 'inicio' && (modoCrear || modoEditar || consultaSeleccionada) && (
             <div className="bg-slate-100/50 border-b border-slate-200 px-6 py-2 flex gap-2 shrink-0">
               <button onClick={() => setSubTab('historia')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${subTab === 'historia' ? 'bg-white border border-slate-200 text-blue-700 shadow-sm' : 'text-slate-500 hover:bg-slate-200/50'}`}>📝 Historia Clínica</button>
@@ -245,14 +256,37 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
               modoCrear || modoEditar ? (
                 <form id="form-consulta" onSubmit={handleGuardarConsulta} className="max-w-3xl">
                   {subTab === 'historia' && (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label className="text-xs font-bold text-slate-700 block mb-1">Motivo de Consulta</label><input required type="text" value={formConsulta.motivo_consulta} onChange={(e) => setFormConsulta({ ...formConsulta, motivo_consulta: e.target.value })} className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500" /></div>
-                        <div><label className="text-xs font-bold text-slate-700 block mb-1">Médico que Atiende</label><input type="text" value={formConsulta.doctor_nombre} onChange={(e) => setFormConsulta({ ...formConsulta, doctor_nombre: e.target.value })} className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                    <div className="space-y-6">
+                      
+                      {/* BLOQUE 1: HISTORIA CLÍNICA */}
+                      <div>
+                        <h4 className="text-xs font-black text-slate-800 uppercase border-b border-slate-200 pb-2 mb-3">Historia Clínica</h4>
+                        <div className="space-y-3">
+                          {/* Campo de médico oculto para mantener lógica del backend */}
+                          <div className="hidden"><input type="text" value={formConsulta.doctor_nombre} onChange={(e) => setFormConsulta({ ...formConsulta, doctor_nombre: e.target.value })} /></div>
+
+                          <div><label className="text-xs font-bold text-slate-700 block mb-1">Motivo de consulta</label><textarea rows="2" placeholder="Describa el motivo de consulta..." value={formConsulta.motivo_consulta} onChange={(e) => setFormConsulta({ ...formConsulta, motivo_consulta: e.target.value })} className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                          <div><label className="text-xs font-bold text-slate-700 block mb-1">Presente enfermedad</label><textarea rows="3" placeholder="Presente enfermedad..." value={formConsulta.enfermedad_actual} onChange={(e) => setFormConsulta({ ...formConsulta, enfermedad_actual: e.target.value })} className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                          <div><label className="text-xs font-bold text-slate-700 block mb-1">Otros antecedentes</label><textarea rows="2" placeholder="Otros antecedentes..." value={formConsulta.antecedentes_patologicos} onChange={(e) => setFormConsulta({ ...formConsulta, antecedentes_patologicos: e.target.value })} className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                        </div>
                       </div>
-                      <div><label className="text-xs font-bold text-slate-700 block mb-1">Evolución / Enfermedad</label><textarea rows="3" value={formConsulta.enfermedad_actual} onChange={(e) => setFormConsulta({ ...formConsulta, enfermedad_actual: e.target.value })} className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500" /></div>
-                      <div><label className="text-xs font-bold text-slate-700 block mb-1">Diagnóstico Clínico</label><input type="text" value={formConsulta.diagnostico} onChange={(e) => setFormConsulta({ ...formConsulta, diagnostico: e.target.value })} className="w-full bg-white border-2 border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 outline-none focus:border-blue-600" /></div>
-                      <div><label className="text-[11px] font-semibold text-slate-600 block mb-1">Plan de Tratamiento / Cuidados</label><input type="text" value={formConsulta.plan_tratamiento} onChange={(e) => setFormConsulta({ ...formConsulta, plan_tratamiento: e.target.value })} className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs outline-none focus:ring-1 focus:ring-blue-500" /></div>
+
+                      {/* BLOQUE 2: EXAMEN Y DIAGNÓSTICO */}
+                      <div>
+                        <h4 className="text-xs font-black text-slate-800 uppercase border-b border-slate-200 pb-2 mb-3">Examen y Diagnóstico</h4>
+                        <div className="space-y-3">
+                          <div><label className="text-xs font-bold text-slate-700 block mb-1">Examen físico</label><textarea rows="3" placeholder="Examen físico..." value={formConsulta.examen_fisico} onChange={(e) => setFormConsulta({ ...formConsulta, examen_fisico: e.target.value })} className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                          <div><label className="text-xs font-bold text-slate-700 block mb-1">Reporte de exámenes</label><textarea rows="2" placeholder="Reporte de exámenes..." value={formConsulta.reporte_examenes} onChange={(e) => setFormConsulta({ ...formConsulta, reporte_examenes: e.target.value })} className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                          <div><label className="text-xs font-bold text-slate-700 block mb-1">Impresión diagnóstica</label><input type="text" placeholder="Impresión diagnóstica..." value={formConsulta.diagnostico} onChange={(e) => setFormConsulta({ ...formConsulta, diagnostico: e.target.value })} className="w-full bg-white border-2 border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 outline-none focus:border-blue-600" /></div>
+                        </div>
+                      </div>
+
+                      {/* BLOQUE 3: PLAN */}
+                      <div>
+                        <h4 className="text-xs font-black text-slate-800 uppercase border-b border-slate-200 pb-2 mb-3">Plan</h4>
+                        <div><label className="text-xs font-bold text-slate-700 block mb-1">Plan de manejo</label><textarea rows="3" placeholder="Plan de manejo..." value={formConsulta.plan_tratamiento} onChange={(e) => setFormConsulta({ ...formConsulta, plan_tratamiento: e.target.value })} className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                      </div>
+
                     </div>
                   )}
                   {subTab === 'receta' && (
@@ -265,21 +299,43 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
               ) : (
                 consultaSeleccionada ? (
                   <div className="max-w-3xl space-y-4">
-                    {/* Botones generales de edición */}
                     <div className="flex flex-wrap justify-end gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
                       <button onClick={activarModoEdicion} className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition cursor-pointer">✏️ Editar Consulta</button>
                       <button onClick={handleEliminarConsulta} className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition cursor-pointer">🗑️ Eliminar Consulta</button>
                     </div>
 
                     {subTab === 'historia' && (
-                      <div className="border border-slate-200 rounded-2xl p-5 space-y-4 bg-white shadow-2xs">
+                      <div className="border border-slate-200 rounded-2xl p-5 space-y-6 bg-white shadow-2xs">
                         <div className="border-b pb-3 flex justify-between items-center">
                           <div><span className="text-[11px] text-blue-600 font-bold block uppercase">Atención Registrada</span><h4 className="text-base font-bold text-slate-800">{consultaSeleccionada.fecha_formateada || String(consultaSeleccionada.fecha || '').slice(0, 16)}</h4><span className="text-xs text-slate-500 font-medium">Médico: {consultaSeleccionada.doctor_nombre}</span></div>
                         </div>
-                        <div><span className="text-xs font-bold text-slate-500 uppercase block mb-1">Motivo de Consulta</span><p className="text-xs text-slate-800 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.motivo_consulta || 'Sin registrar.'}</p></div>
-                        {consultaSeleccionada.enfermedad_actual && (<div><span className="text-xs font-bold text-slate-500 uppercase block mb-1">Evolución</span><p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.enfermedad_actual}</p></div>)}
-                        <div><span className="text-xs font-bold text-slate-500 uppercase block mb-1">Diagnóstico</span><p className="text-xs font-bold text-blue-900 bg-blue-50/70 p-2.5 rounded-xl border border-blue-100">{consultaSeleccionada.diagnostico || 'N/D'}</p></div>
-                        {consultaSeleccionada.plan_tratamiento && (<div><span className="text-xs font-bold text-slate-500 uppercase block mb-1">Plan / Indicaciones</span><p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.plan_tratamiento}</p></div>)}
+                        
+                        {/* LECTURA HISTORIA CLÍNICA */}
+                        <div>
+                          <h4 className="text-xs font-black text-slate-800 uppercase border-b border-slate-100 pb-1 mb-2">Historia Clínica</h4>
+                          <div className="space-y-3">
+                            <div><span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Motivo de consulta</span><p className="text-xs text-slate-800 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.motivo_consulta || 'N/D'}</p></div>
+                            <div><span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Presente enfermedad</span><p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.enfermedad_actual || 'N/D'}</p></div>
+                            <div><span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Otros antecedentes</span><p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.antecedentes_patologicos || 'N/D'}</p></div>
+                          </div>
+                        </div>
+
+                        {/* LECTURA EXAMEN Y DIAGNÓSTICO */}
+                        <div>
+                          <h4 className="text-xs font-black text-slate-800 uppercase border-b border-slate-100 pb-1 mb-2">Examen y Diagnóstico</h4>
+                          <div className="space-y-3">
+                            <div><span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Examen físico</span><p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.examen_fisico || 'N/D'}</p></div>
+                            <div><span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Reporte de exámenes</span><p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.reporte_examenes || 'N/D'}</p></div>
+                            <div><span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Impresión diagnóstica</span><p className="text-xs font-bold text-blue-900 bg-blue-50/70 p-2.5 rounded-xl border border-blue-100">{consultaSeleccionada.diagnostico || 'N/D'}</p></div>
+                          </div>
+                        </div>
+
+                        {/* LECTURA PLAN */}
+                        <div>
+                          <h4 className="text-xs font-black text-slate-800 uppercase border-b border-slate-100 pb-1 mb-2">Plan</h4>
+                          <div><span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Plan de manejo</span><p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.plan_tratamiento || 'N/D'}</p></div>
+                        </div>
+
                       </div>
                     )}
                     {subTab === 'receta' && (
@@ -317,7 +373,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
         {/* COLUMNA DERECHA */}
         <aside className="w-72 bg-slate-50 flex flex-col shrink-0 overflow-y-auto p-4 space-y-4 border-l border-slate-200">
           <div className="space-y-2">
-            <button onClick={() => { setModoCrear(true); setModoEditar(false); setSeccionActiva('inicio'); setSubTab('historia'); setFormConsulta({ doctor_nombre: 'Dra. Consulta', motivo_consulta: '', enfermedad_actual: '', antecedentes_patologicos: '', diagnostico: '', plan_tratamiento: '' }); setMedicamentos([{ medicamento: '', frecuencia: 'Cada 8 horas', dias_tratamiento: 5, indicacion: '' }]); setEstudiosNuevos([{ tipo_estudio: '', laboratorio: '', observaciones: '' }]); }} className="w-full bg-[#10a37f] hover:bg-emerald-700 text-white font-bold text-xs p-2.5 rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">➕ Nueva Consulta</button>
+            <button onClick={() => { setModoCrear(true); setModoEditar(false); setSeccionActiva('inicio'); setSubTab('historia'); setFormConsulta({ doctor_nombre: 'Dra. Consulta', motivo_consulta: '', enfermedad_actual: '', antecedentes_patologicos: '', examen_fisico: '', reporte_examenes: '', diagnostico: '', plan_tratamiento: '' }); setMedicamentos([{ medicamento: '', frecuencia: 'Cada 8 horas', dias_tratamiento: 5, indicacion: '' }]); setEstudiosNuevos([{ tipo_estudio: '', laboratorio: '', observaciones: '' }]); }} className="w-full bg-[#10a37f] hover:bg-emerald-700 text-white font-bold text-xs p-2.5 rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">➕ Nueva Consulta</button>
             <button onClick={() => onAgendarCita(paciente)} className="w-full bg-white border border-slate-300 hover:bg-blue-50 text-slate-700 font-bold text-xs p-2.5 rounded-xl shadow-2xs transition flex items-center justify-center gap-1.5 cursor-pointer">📅 Agendar Cita</button>
           </div>
           <div className="flex-1">
