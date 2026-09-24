@@ -34,12 +34,7 @@ export default function MainLayout({
             </span>
             <span className="text-[11px] text-blue-200">Panel Principal</span>
 
-            <button 
-              onClick={onNuevaCita}
-              className="mt-3 w-full bg-[#10b981] hover:bg-emerald-600 text-white font-bold text-xs py-2 px-3 rounded-xl shadow transition flex items-center justify-center gap-1.5"
-            >
-              ➕ Agendar Cita
-            </button>
+            
           </div>
 
           {/* Menú de Navegación */}
