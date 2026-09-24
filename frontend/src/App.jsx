@@ -261,7 +261,26 @@ export default function App() {
                 setVistaActual('expediente');
               }}
               onIrAgenda={() => setVistaActual('agenda')}
-              onNuevoPaciente={() => setIsModalOpen(true)}
+              
+              // ==========================================
+              // AQUÍ ESTÁ EL CAMBIO PARA CREAR EXPEDIENTES
+              // ==========================================
+              onNuevoPaciente={async () => {
+                try {
+                  const res = await api.post('/api/pacientes', {
+                    nombre: 'Nuevo Paciente (Borrador)',
+                    telefono: '00000000',
+                    sexo: 'Otro'
+                  });
+                  const nuevoId = res.data.id;
+                  setPacienteActivoId(nuevoId);
+                  setVistaActual('expediente');
+                } catch (err) {
+                  console.error(err);
+                  alert('Error creando expediente. Revisa la consola.');
+                }
+              }}
+              // ==========================================
             />
           ) : (
             /* VISTA DE AGENDA / CALENDARIO */
