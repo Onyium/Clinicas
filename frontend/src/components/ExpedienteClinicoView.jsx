@@ -291,6 +291,141 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
     }
   };
 
+  // Función para imprimir la Receta Médica
+  const imprimirReceta = () => {
+    if (!consultaSeleccionada || recetasDeConsulta.length === 0) {
+      alert('No hay medicamentos en esta receta para imprimir.');
+      return;
+    }
+
+    const ventanaImpresion = window.open('', '_blank');
+    ventanaImpresion.document.write(`
+      <html>
+        <head>
+          <title>Receta Médica - Clinic 365</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; color: #333; }
+            .header { text-align: center; border-bottom: 2px solid #1b4e7b; padding-bottom: 10px; margin-bottom: 20px; }
+            .header h1 { color: #1b4e7b; margin: 0; font-size: 22px; }
+            .header p { margin: 2px 0; font-size: 12px; color: #666; }
+            .info { margin-bottom: 20px; font-size: 13px; }
+            .info p { margin: 4px 0; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+            th { background-color: #f8fafc; color: #1b4e7b; }
+            .footer { margin-top: 50px; text-align: center; font-size: 12px; border-top: 1px dashed #ccc; padding-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>CLINIC 365 - RÉCIPE MÉDICO</h1>
+            <p>Consultorio Médico Especializado</p>
+          </div>
+          <div class="info">
+            <p><strong>Paciente:</strong> ${paciente.nombre}</p>
+            <p><strong>Folio:</strong> P${String(paciente.id).padStart(3, '0')} | <strong>Fecha:</strong> ${consultaSeleccionada.fecha_formateada || 'Hoy'}</p>
+            <p><strong>Médico Tratante:</strong> ${consultaSeleccionada.doctor_nombre}</p>
+            <p><strong>Diagnóstico:</strong> ${consultaSeleccionada.diagnostico || 'N/D'}</p>
+          </div>
+          <h3>Prescripción Farmacológica:</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Medicamento</th>
+                <th>Frecuencia / Dosis</th>
+                <th>Duración</th>
+                <th>Indicaciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${recetasDeConsulta.map(r => `
+                <tr>
+                  <td><strong>${r.medicamento}</strong></td>
+                  <td>${r.dosis_indicacion || 'Cada 8 horas'}</td>
+                  <td>${r.dias_tratamiento} días</td>
+                  <td>${r.indicacion || 'Sig. Med.'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <div class="footer">
+            <p>_____________________________________</p>
+            <p>Firma y Sello del Médico</p>
+          </div>
+        </body>
+      </html>
+    `);
+    ventanaImpresion.document.close();
+    ventanaImpresion.focus();
+    setTimeout(() => ventanaImpresion.print(), 500);
+  };
+
+  // Función para imprimir la Orden de Laboratorio / Estudios
+  const imprimirLaboratorio = () => {
+    if (!consultaSeleccionada || estudiosDeConsulta.length === 0) {
+      alert('No hay estudios clínicos registrados en esta consulta para imprimir.');
+      return;
+    }
+
+    const ventanaImpresion = window.open('', '_blank');
+    ventanaImpresion.document.write(`
+      <html>
+        <head>
+          <title>Orden de Laboratorio - Clinic 365</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; color: #333; }
+            .header { text-align: center; border-bottom: 2px solid #008f85; padding-bottom: 10px; margin-bottom: 20px; }
+            .header h1 { color: #008f85; margin: 0; font-size: 22px; }
+            .header p { margin: 2px 0; font-size: 12px; color: #666; }
+            .info { margin-bottom: 20px; font-size: 13px; }
+            .info p { margin: 4px 0; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+            th { background-color: #f8fafc; color: #008f85; }
+            .footer { margin-top: 50px; text-align: center; font-size: 12px; border-top: 1px dashed #ccc; padding-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>CLINIC 365 - ORDEN DE LABORATORIO</h1>
+            <p>Solicitud de Estudios Clínicos</p>
+          </div>
+          <div class="info">
+            <p><strong>Paciente:</strong> ${paciente.nombre}</p>
+            <p><strong>Folio:</strong> P${String(paciente.id).padStart(3, '0')} | <strong>Fecha:</strong> ${consultaSeleccionada.fecha_formateada || 'Hoy'}</p>
+            <p><strong>Médico Solicitante:</strong> ${consultaSeleccionada.doctor_nombre}</p>
+          </div>
+          <h3>Estudios Solicitados:</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Tipo de Estudio / Examen</th>
+                <th>Laboratorio Referencia</th>
+                <th>Observaciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${estudiosDeConsulta.map(e => `
+                <tr>
+                  <td><strong>${e.tipo_estudio}</strong></td>
+                  <td>${e.laboratorio || 'Cualquiera'}</td>
+                  <td>${e.observaciones || 'Ninguna'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <div class="footer">
+            <p>_____________________________________</p>
+            <p>Firma y Sello del Médico</p>
+          </div>
+        </body>
+      </html>
+    `);
+    ventanaImpresion.document.close();
+    ventanaImpresion.focus();
+    setTimeout(() => ventanaImpresion.print(), 500);
+  };
+
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-slate-100 text-slate-500 text-sm font-medium">
@@ -618,21 +753,33 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                 consultaSeleccionada ? (
                   <div className="space-y-4 max-w-3xl">
                     
-                    {/* Botones de Editar y Eliminar Consulta */}
-                    <div className="flex justify-end gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
-                      <button
-                        onClick={activarModoEdicion}
-                        className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition shadow-2xs flex items-center gap-1 cursor-pointer"
-                      >
-                        ✏️ Editar Consulta
-                      </button>
-                      <button
-                        onClick={handleEliminarConsulta}
-                        className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition shadow-2xs flex items-center gap-1 cursor-pointer"
-                      >
-                        🗑️ Eliminar Consulta
-                      </button>
-                    </div>
+                    {/* Botones de Acción, Edición e Impresión */}
+                  <div className="flex flex-wrap justify-end gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
+                    <button
+                      onClick={imprimirReceta}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition shadow-2xs flex items-center gap-1 cursor-pointer"
+                    >
+                      🖨️ Imprimir Receta
+                    </button>
+                    <button
+                      onClick={imprimirLaboratorio}
+                      className="bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition shadow-2xs flex items-center gap-1 cursor-pointer"
+                    >
+                      🧪 Imprimir Laboratorios
+                    </button>
+                    <button
+                      onClick={activarModoEdicion}
+                      className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition shadow-2xs flex items-center gap-1 cursor-pointer"
+                    >
+                      ✏️ Editar
+                    </button>
+                    <button
+                      onClick={handleEliminarConsulta}
+                      className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition shadow-2xs flex items-center gap-1 cursor-pointer"
+                    >
+                      🗑️ Eliminar
+                    </button>
+                  </div>
 
                     <div className="border border-slate-200 rounded-2xl p-5 space-y-4 bg-white shadow-2xs">
                       <div className="border-b pb-3 flex justify-between items-center">
