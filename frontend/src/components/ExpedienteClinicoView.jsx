@@ -1,49 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
+import RecetaTab from './RecetaTab';
+import LaboratorioTab from './LaboratorioTab';
 
 export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarCita }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [seccionActiva, setSeccionActiva] = useState('inicio'); // 'inicio' | 'general' | 'recetas'
+  const [seccionActiva, setSeccionActiva] = useState('inicio'); 
+  
+  // NUEVO ESTADO PARA LAS PESTAÑAS TIPO ODOO DENTRO DE LA CONSULTA
+  const [subTab, setSubTab] = useState('historia'); // 'historia' | 'receta' | 'laboratorio'
+  
   const [modoCrear, setModoCrear] = useState(false);
   const [modoEditar, setModoEditar] = useState(false);
   const [consultaSeleccionada, setConsultaSeleccionada] = useState(null);
 
-  // Formulario para registrar o editar consultas
   const [formConsulta, setFormConsulta] = useState({
-    doctor_nombre: 'Dra. Consulta',
-    motivo_consulta: '',
-    enfermedad_actual: '',
-    antecedentes_patologicos: '',
-    diagnostico: '',
-    plan_tratamiento: ''
+    doctor_nombre: 'Dra. Consulta', motivo_consulta: '', enfermedad_actual: '', 
+    antecedentes_patologicos: '', diagnostico: '', plan_tratamiento: ''
   });
 
-  // Lista dinámica de medicamentos para la receta
-  const [medicamentos, setMedicamentos] = useState([
-    { medicamento: '', frecuencia: 'Cada 8 horas', dias_tratamiento: 5, indicacion: '' }
-  ]);
-
-  // Lista dinámica de estudios clínicos al crear consulta nueva
-  const [estudiosNuevos, setEstudiosNuevos] = useState([
-    { tipo_estudio: '', laboratorio: '', observaciones: '' }
-  ]);
-
-  // Estados para modal de estudio rápido en consulta existente
+  const [medicamentos, setMedicamentos] = useState([{ medicamento: '', frecuencia: 'Cada 8 horas', dias_tratamiento: 5, indicacion: '' }]);
+  const [estudiosNuevos, setEstudiosNuevos] = useState([{ tipo_estudio: '', laboratorio: '', observaciones: '' }]);
   const [mostrarModalEstudio, setMostrarModalEstudio] = useState(false);
   const [formEstudioRapido, setFormEstudioRapido] = useState({ tipo_estudio: '', laboratorio: '', observaciones: '' });
 
-  // Datos Generales del paciente (Ficha) con soporte para foto_url
   const [formGeneral, setFormGeneral] = useState({
-    nombre: '',
-    telefono: '',
-    fecha_nacimiento: '',
-    sexo: 'Otro',
-    alergias: '',
-    antecedentes: '',
-    contacto_emergencia: '',
-    telefono_emergencia: '',
-    foto_url: ''
+    nombre: '', telefono: '', fecha_nacimiento: '', sexo: 'Otro', alergias: '',
+    antecedentes: '', contacto_emergencia: '', telefono_emergencia: '', foto_url: ''
   });
 
   const [guardando, setGuardando] = useState(false);
@@ -55,28 +39,19 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
     try {
       const res = await api.get(`/api/pacientes/${pacienteId}`);
       setData(res.data);
-
       const p = res.data?.paciente;
       if (p) {
         setFormGeneral({
-          nombre: p.nombre || '',
-          telefono: p.telefono || '',
+          nombre: p.nombre || '', telefono: p.telefono || '', 
           fecha_nacimiento: p.fecha_nacimiento ? p.fecha_nacimiento.slice(0, 10) : '',
-          sexo: p.sexo || 'Otro',
-          alergias: p.alergias || '',
-          antecedentes: p.antecedentes || '',
-          contacto_emergencia: p.contacto_emergencia || '',
-          telefono_emergencia: p.telefono_emergencia || '',
+          sexo: p.sexo || 'Otro', alergias: p.alergias || '', antecedentes: p.antecedentes || '',
+          contacto_emergencia: p.contacto_emergencia || '', telefono_emergencia: p.telefono_emergencia || '', 
           foto_url: p.foto_url || ''
         });
       }
-
       const consultas = res.data?.consultas || [];
       if (consultas.length > 0) {
-        const actual = consultaSeleccionada 
-          ? consultas.find(c => c.id === consultaSeleccionada.id) || consultas[0]
-          : consultas[0];
-        
+        const actual = consultaSeleccionada ? consultas.find(c => c.id === consultaSeleccionada.id) || consultas[0] : consultas[0];
         setConsultaSeleccionada(actual);
         setModoCrear(false);
         setModoEditar(false);
@@ -90,84 +65,40 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
     }
   };
 
-  useEffect(() => {
-    cargarExpediente();
-  }, [pacienteId]);
+  useEffect(() => { cargarExpediente(); }, [pacienteId]);
 
-  // Control de medicamentos en la receta
-  const agregarMedicamento = () => {
-    setMedicamentos([
-      ...medicamentos,
-      { medicamento: '', frecuencia: 'Cada 8 horas', dias_tratamiento: 5, indicacion: '' }
-    ]);
-  };
+  const agregarMedicamento = () => setMedicamentos([...medicamentos, { medicamento: '', frecuencia: 'Cada 8 horas', dias_tratamiento: 5, indicacion: '' }]);
+  const eliminarMedicamento = (idx) => setMedicamentos(medicamentos.filter((_, i) => i !== idx));
+  const actualizarMedicamento = (idx, campo, valor) => { const copia = [...medicamentos]; copia[idx][campo] = valor; setMedicamentos(copia); };
 
-  const eliminarMedicamento = (idx) => {
-    setMedicamentos(medicamentos.filter((_, i) => i !== idx));
-  };
+  const agregarEstudioNuevo = () => setEstudiosNuevos([...estudiosNuevos, { tipo_estudio: '', laboratorio: '', observaciones: '' }]);
+  const eliminarEstudioNuevo = (idx) => setEstudiosNuevos(estudiosNuevos.filter((_, i) => i !== idx));
+  const actualizarEstudioNuevo = (idx, campo, valor) => { const copia = [...estudiosNuevos]; copia[idx][campo] = valor; setEstudiosNuevos(copia); };
 
-  const actualizarMedicamento = (idx, campo, valor) => {
-    const copia = [...medicamentos];
-    copia[idx][campo] = valor;
-    setMedicamentos(copia);
-  };
-
-  // Control de estudios clínicos dinámicos
-  const agregarEstudioNuevo = () => {
-    setEstudiosNuevos([...estudiosNuevos, { tipo_estudio: '', laboratorio: '', observaciones: '' }]);
-  };
-
-  const eliminarEstudioNuevo = (idx) => {
-    setEstudiosNuevos(estudiosNuevos.filter((_, i) => i !== idx));
-  };
-
-  const actualizarEstudioNuevo = (idx, campo, valor) => {
-    const copia = [...estudiosNuevos];
-    copia[idx][campo] = valor;
-    setEstudiosNuevos(copia);
-  };
-
-  // Guardar nueva atención o edición
   const handleGuardarConsulta = async (e) => {
     e.preventDefault();
     setGuardando(true);
     try {
-      const listaMedicamentosValidos = medicamentos.filter(
-        (m) => m.medicamento && m.medicamento.trim() !== ''
-      );
-      const listaEstudiosValidos = estudiosNuevos.filter(
-        (e) => e.tipo_estudio && e.tipo_estudio.trim() !== ''
-      );
+      const listaMedicamentosValidos = medicamentos.filter(m => m.medicamento && m.medicamento.trim() !== '');
+      const listaEstudiosValidos = estudiosNuevos.filter(e => e.tipo_estudio && e.tipo_estudio.trim() !== '');
 
       if (modoEditar && consultaSeleccionada) {
-        await api.put(`/api/consultas-independientes/${consultaSeleccionada.id}`, {
-          ...formConsulta,
-          medicamentos: listaMedicamentosValidos
-        });
+        await api.put(`/api/consultas-independientes/${consultaSeleccionada.id}`, { ...formConsulta, medicamentos: listaMedicamentosValidos });
         alert('✅ Consulta y receta actualizadas correctamente.');
       } else {
-        const res = await api.post('/api/consultas-independientes', {
-          paciente_id: pacienteId,
-          ...formConsulta,
-          medicamentos: listaMedicamentosValidos
-        });
-
+        const res = await api.post('/api/consultas-independientes', { paciente_id: pacienteId, ...formConsulta, medicamentos: listaMedicamentosValidos });
         const nuevaConsultaId = res.data.id;
         if (listaEstudiosValidos.length > 0 && nuevaConsultaId) {
           for (const est of listaEstudiosValidos) {
-            await api.post(`/api/estudios-clinicos`, {
-              consulta_id: nuevaConsultaId,
-              paciente_id: pacienteId,
-              ...est
-            });
+            await api.post(`/api/estudios-clinicos`, { consulta_id: nuevaConsultaId, paciente_id: pacienteId, ...est });
           }
         }
-
         alert('✅ Consulta médica, receta y estudios guardados con éxito.');
       }
 
       setModoCrear(false);
       setModoEditar(false);
+      setSubTab('historia'); // Regresar a la pestaña principal al guardar
       setEstudiosNuevos([{ tipo_estudio: '', laboratorio: '', observaciones: '' }]);
       await cargarExpediente();
     } catch (err) {
@@ -178,926 +109,230 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
     }
   };
 
-  // Agregar estudio rápido a consulta existente
   const handleAgregarEstudioRapido = async (e) => {
     e.preventDefault();
     if (!consultaSeleccionada) return;
     try {
-      await api.post(`/api/estudios-clinicos`, {
-        consulta_id: consultaSeleccionada.id,
-        paciente_id: pacienteId,
-        ...formEstudioRapido
-      });
+      await api.post(`/api/estudios-clinicos`, { consulta_id: consultaSeleccionada.id, paciente_id: pacienteId, ...formEstudioRapido });
       alert('✅ Estudio clínico agregado con éxito.');
       setFormEstudioRapido({ tipo_estudio: '', laboratorio: '', observaciones: '' });
       setMostrarModalEstudio(false);
       await cargarExpediente();
-    } catch (err) {
-      console.error(err);
-      alert('Error al agregar estudio clínico');
-    }
+    } catch (err) { alert('Error al agregar estudio clínico'); }
   };
 
-  // Eliminar estudio clínico
   const handleEliminarEstudio = async (estudioId) => {
     if (!window.confirm('¿Desea eliminar este estudio clínico?')) return;
-    try {
-      await api.delete(`/api/estudios-clinicos/${estudioId}`);
-      await cargarExpediente();
-    } catch (err) {
-      console.error(err);
-      alert('Error al eliminar estudio');
-    }
+    try { await api.delete(`/api/estudios-clinicos/${estudioId}`); await cargarExpediente(); } catch (err) { alert('Error al eliminar estudio'); }
   };
 
-  // Eliminar consulta seleccionada
   const handleEliminarConsulta = async () => {
     if (!consultaSeleccionada) return;
-    if (!window.confirm('¿Estás seguro de eliminar esta consulta, sus recetas y estudios asociados? Esta acción no se puede deshacer.')) {
-      return;
-    }
-
+    if (!window.confirm('¿Estás seguro de eliminar esta consulta, sus recetas y estudios asociados? Esta acción no se puede deshacer.')) return;
     try {
       await api.delete(`/api/consultas-independientes/${consultaSeleccionada.id}`);
       alert('🗑️ Consulta eliminada con éxito.');
       setConsultaSeleccionada(null);
       await cargarExpediente();
-    } catch (err) {
-      console.error(err);
-      alert('Error al eliminar la consulta');
-    }
+    } catch (err) { alert('Error al eliminar la consulta'); }
   };
 
-  // Función para eliminar el expediente completo del paciente
   const handleEliminarExpediente = async () => {
-    if (!window.confirm('⚠️ ¿Estás COMPLETAMENTE SEGURO de eliminar este expediente? Se borrarán todas sus consultas, recetas, estudios y citas asociadas. Esta acción no se puede deshacer.')) {
-      return;
-    }
-
-    try {
-      await api.delete(`/api/pacientes/${pacienteId}`);
-      alert('🗑️ Expediente eliminado correctamente.');
-      onVolver(); 
-    } catch (err) {
-      console.error('Error al eliminar expediente:', err);
-      alert('Error al intentar eliminar el expediente.');
-    }
+    if (!window.confirm('⚠️ ¿Estás COMPLETAMENTE SEGURO de eliminar este expediente? Se borrarán todas sus consultas, recetas, estudios y citas asociadas.')) return;
+    try { await api.delete(`/api/pacientes/${pacienteId}`); alert('🗑️ Expediente eliminado.'); onVolver(); } catch (err) { alert('Error al eliminar el expediente.'); }
   };
 
-  // Preparar formulario para editar la consulta actual
   const activarModoEdicion = () => {
     if (!consultaSeleccionada) return;
     setFormConsulta({
-      doctor_nombre: consultaSeleccionada.doctor_nombre || 'Dra. Consulta',
-      motivo_consulta: consultaSeleccionada.motivo_consulta || '',
-      enfermedad_actual: consultaSeleccionada.enfermedad_actual || '',
-      antecedentes_patologicos: consultaSeleccionada.antecedentes_patologicos || '',
-      diagnostico: consultaSeleccionada.diagnostico || '',
-      plan_tratamiento: consultaSeleccionada.plan_tratamiento || ''
+      doctor_nombre: consultaSeleccionada.doctor_nombre || 'Dra. Consulta', motivo_consulta: consultaSeleccionada.motivo_consulta || '',
+      enfermedad_actual: consultaSeleccionada.enfermedad_actual || '', antecedentes_patologicos: consultaSeleccionada.antecedentes_patologicos || '',
+      diagnostico: consultaSeleccionada.diagnostico || '', plan_tratamiento: consultaSeleccionada.plan_tratamiento || ''
     });
-
     const recs = tratamientos.filter(t => t.consulta_id === consultaSeleccionada.id);
     if (recs.length > 0) {
-      setMedicamentos(recs.map(r => ({
-        medicamento: r.medicamento || '',
-        frecuencia: r.dosis_indicacion || 'Cada 8 horas',
-        dias_tratamiento: r.dias_tratamiento || 5,
-        indicacion: ''
-      })));
-    } else {
-      setMedicamentos([{ medicamento: '', frecuencia: 'Cada 8 horas', dias_tratamiento: 5, indicacion: '' }]);
-    }
-
+      setMedicamentos(recs.map(r => ({ medicamento: r.medicamento || '', frecuencia: r.dosis_indicacion || 'Cada 8 horas', dias_tratamiento: r.dias_tratamiento || 5, indicacion: '' })));
+    } else { setMedicamentos([{ medicamento: '', frecuencia: 'Cada 8 horas', dias_tratamiento: 5, indicacion: '' }]); }
     setModoEditar(true);
     setModoCrear(false);
+    setSubTab('historia');
   };
 
-  // Guardar cambios en datos generales (incluyendo foto_url)
   const handleGuardarGeneral = async (e) => {
     e.preventDefault();
     setGuardandoGeneral(true);
-    try {
-      await api.post('/api/pacientes', {
-        id: pacienteId,
-        ...formGeneral
-      });
-      alert('✅ Ficha médica actualizada con éxito.');
-      await cargarExpediente();
-    } catch (err) {
-      console.error(err);
-      alert('Error al guardar datos generales');
-    } finally {
-      setGuardandoGeneral(false);
-    }
+    try { await api.post('/api/pacientes', { id: pacienteId, ...formGeneral }); alert('✅ Ficha médica actualizada con éxito.'); await cargarExpediente(); } catch (err) { alert('Error al guardar datos generales'); } finally { setGuardandoGeneral(false); }
   };
 
-  // Función para imprimir la Receta Médica
-  const imprimirReceta = () => {
-    if (!consultaSeleccionada || recetasDeConsulta.length === 0) {
-      alert('No hay medicamentos en esta receta para imprimir.');
-      return;
-    }
-
-    const ventanaImpresion = window.open('', '_blank');
-    ventanaImpresion.document.write(`
-      <html>
-        <head>
-          <title>Receta Médica - Clinic 365</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; color: #333; }
-            .header { text-align: center; border-bottom: 2px solid #1b4e7b; padding-bottom: 10px; margin-bottom: 20px; }
-            .header h1 { color: #1b4e7b; margin: 0; font-size: 22px; }
-            .header p { margin: 2px 0; font-size: 12px; color: #666; }
-            .info { margin-bottom: 20px; font-size: 13px; }
-            .info p { margin: 4px 0; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
-            th { background-color: #f8fafc; color: #1b4e7b; }
-            .footer { margin-top: 50px; text-align: center; font-size: 12px; border-top: 1px dashed #ccc; padding-top: 20px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>CLINIC 365 - RÉCIPE MÉDICO</h1>
-            <p>Consultorio Médico Especializado</p>
-          </div>
-          <div class="info">
-            <p><strong>Paciente:</strong> ${paciente.nombre}</p>
-            <p><strong>Folio:</strong> P${String(paciente.id).padStart(3, '0')} | <strong>Fecha:</strong> ${consultaSeleccionada.fecha_formateada || 'Hoy'}</p>
-            <p><strong>Médico Tratante:</strong> ${consultaSeleccionada.doctor_nombre}</p>
-            <p><strong>Diagnóstico:</strong> ${consultaSeleccionada.diagnostico || 'N/D'}</p>
-          </div>
-          <h3>Prescripción Farmacológica:</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Medicamento</th>
-                <th>Frecuencia / Dosis</th>
-                <th>Duración</th>
-                <th>Indicaciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${recetasDeConsulta.map(r => `
-                <tr>
-                  <td><strong>${r.medicamento}</strong></td>
-                  <td>${r.dosis_indicacion || 'Cada 8 horas'}</td>
-                  <td>${r.dias_tratamiento} días</td>
-                  <td>${r.indicacion || 'Sig. Med.'}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-          <div class="footer">
-            <p>_____________________________________</p>
-            <p>Firma y Sello del Médico</p>
-          </div>
-        </body>
-      </html>
-    `);
-    ventanaImpresion.document.close();
-    ventanaImpresion.focus();
-    setTimeout(() => ventanaImpresion.print(), 500);
-  };
-
-  // Función para imprimir la Orden de Laboratorio / Estudios
-  const imprimirLaboratorio = () => {
-    if (!consultaSeleccionada || estudiosDeConsulta.length === 0) {
-      alert('No hay estudios clínicos registrados en esta consulta para imprimir.');
-      return;
-    }
-
-    const ventanaImpresion = window.open('', '_blank');
-    ventanaImpresion.document.write(`
-      <html>
-        <head>
-          <title>Orden de Laboratorio - Clinic 365</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; color: #333; }
-            .header { text-align: center; border-bottom: 2px solid #008f85; padding-bottom: 10px; margin-bottom: 20px; }
-            .header h1 { color: #008f85; margin: 0; font-size: 22px; }
-            .header p { margin: 2px 0; font-size: 12px; color: #666; }
-            .info { margin-bottom: 20px; font-size: 13px; }
-            .info p { margin: 4px 0; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
-            th { background-color: #f8fafc; color: #008f85; }
-            .footer { margin-top: 50px; text-align: center; font-size: 12px; border-top: 1px dashed #ccc; padding-top: 20px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>CLINIC 365 - ORDEN DE LABORATORIO</h1>
-            <p>Solicitud de Estudios Clínicos</p>
-          </div>
-          <div class="info">
-            <p><strong>Paciente:</strong> ${paciente.nombre}</p>
-            <p><strong>Folio:</strong> P${String(paciente.id).padStart(3, '0')} | <strong>Fecha:</strong> ${consultaSeleccionada.fecha_formateada || 'Hoy'}</p>
-            <p><strong>Médico Solicitante:</strong> ${consultaSeleccionada.doctor_nombre}</p>
-          </div>
-          <h3>Estudios Solicitados:</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Tipo de Estudio / Examen</th>
-                <th>Laboratorio Referencia</th>
-                <th>Observaciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${estudiosDeConsulta.map(e => `
-                <tr>
-                  <td><strong>${e.tipo_estudio}</strong></td>
-                  <td>${e.laboratorio || 'Cualquiera'}</td>
-                  <td>${e.observaciones || 'Ninguna'}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-          <div class="footer">
-            <p>_____________________________________</p>
-            <p>Firma y Sello del Médico</p>
-          </div>
-        </body>
-      </html>
-    `);
-    ventanaImpresion.document.close();
-    ventanaImpresion.focus();
-    setTimeout(() => ventanaImpresion.print(), 500);
-  };
-
-  if (loading) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-slate-100 text-slate-500 text-sm font-medium">
-        Cargando expediente clínico...
-      </div>
-    );
-  }
+  if (loading) return <div className="h-screen flex items-center justify-center bg-slate-100 text-slate-500 text-sm">Cargando expediente clínico...</div>;
 
   const paciente = data?.paciente || {};
   const consultas = data?.consultas || [];
   const tratamientos = data?.tratamientos || [];
   const estudios = data?.estudios || [];
-
-  const recetasDeConsulta = consultaSeleccionada
-    ? tratamientos.filter((t) => t.consulta_id === consultaSeleccionada.id)
-    : [];
-
-  const estudiosDeConsulta = consultaSeleccionada
-    ? estudios.filter((e) => e.consulta_id === consultaSeleccionada.id)
-    : [];
+  const recetasDeConsulta = consultaSeleccionada ? tratamientos.filter((t) => t.consulta_id === consultaSeleccionada.id) : [];
+  const estudiosDeConsulta = consultaSeleccionada ? estudios.filter((e) => e.consulta_id === consultaSeleccionada.id) : [];
 
   return (
     <div className="h-screen flex flex-col bg-[#eef2f6] font-sans overflow-hidden">
       
-      {/* 1. BARRA SUPERIOR INSTITUCIONAL */}
+      {/* 1. HEADER */}
       <header className="bg-[#1b4e7b] text-white px-6 py-2.5 flex justify-between items-center shrink-0 shadow-sm">
         <div className="flex items-center gap-4">
           <span className="font-black tracking-wider text-base">CLINIC 365</span>
-          <span className="text-[10px] bg-blue-500/30 text-blue-200 px-2 py-0.5 rounded font-mono">
-            EXPEDIENTE CLÍNICO
-          </span>
+          <span className="text-[10px] bg-blue-500/30 text-blue-200 px-2 py-0.5 rounded font-mono">EXPEDIENTE CLÍNICO</span>
         </div>
-
-        <button
-          onClick={onVolver}
-          className="bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 cursor-pointer"
-        >
-          ← Volver a la Agenda / Catálogo
-        </button>
+        <button onClick={onVolver} className="bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 cursor-pointer">← Volver al Catálogo</button>
       </header>
 
       {/* 2. ÁREA DE 3 COLUMNAS */}
       <div className="flex-1 flex overflow-hidden">
         
-        {/* ================= COLUMNA IZQUIERDA: PERFIL DEL PACIENTE ================= */}
+        {/* COLUMNA IZQUIERDA */}
         <aside className="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0 overflow-y-auto">
           <div className="p-4 flex flex-col items-center text-center border-b border-slate-100">
-            {/* Avatar con Foto URL o Inicial por defecto */}
             {paciente.foto_url ? (
-              <img 
-                src={paciente.foto_url} 
-                alt={paciente.nombre} 
-                className="w-16 h-16 rounded-full object-cover border-2 border-blue-200 shadow-inner mb-2" 
-              />
+              <img src={paciente.foto_url} alt={paciente.nombre} className="w-16 h-16 rounded-full object-cover border-2 border-blue-200 shadow-inner mb-2" />
             ) : (
-              <div className="w-16 h-16 rounded-full bg-blue-50 border-2 border-blue-200 flex items-center justify-center text-2xl font-black text-blue-700 shadow-inner mb-2">
-                {paciente.nombre?.charAt(0) || 'P'}
-              </div>
+              <div className="w-16 h-16 rounded-full bg-blue-50 border-2 border-blue-200 flex items-center justify-center text-2xl font-black text-blue-700 shadow-inner mb-2">{paciente.nombre?.charAt(0) || 'P'}</div>
             )}
-
-            <h2 className="text-sm font-black text-slate-800 uppercase tracking-tight">
-              {paciente.nombre}
-            </h2>
-            <span className="text-xs text-blue-600 font-mono font-bold mt-0.5">
-              Folio: #{String(paciente.id).padStart(4, '0')}
-            </span>
-            <span className="text-xs text-slate-500 font-mono mt-0.5">
-              📞 {paciente.telefono}
-            </span>
-
-            {/* Banner de Alergias */}
+            <h2 className="text-sm font-black text-slate-800 uppercase tracking-tight">{paciente.nombre}</h2>
+            <span className="text-xs text-blue-600 font-mono font-bold mt-0.5">Folio: #{String(paciente.id).padStart(4, '0')}</span>
+            <span className="text-xs text-slate-500 font-mono mt-0.5">📞 {paciente.telefono}</span>
             {paciente.alergias && paciente.alergias.toLowerCase() !== 'ninguna' && (
-              <div className="mt-3 w-full bg-rose-600 text-white text-[11px] font-bold py-1 px-2 rounded-lg shadow-xs uppercase tracking-wider">
-                ⚠️ Alergia: {paciente.alergias}
-              </div>
+              <div className="mt-3 w-full bg-rose-600 text-white text-[11px] font-bold py-1 px-2 rounded-lg shadow-xs uppercase tracking-wider">⚠️ Alergia: {paciente.alergias}</div>
             )}
           </div>
 
           <nav className="p-2 space-y-1 text-xs font-semibold">
-            <button
-              onClick={() => {
-                setSeccionActiva('inicio');
-                setModoCrear(false);
-                setModoEditar(false);
-                if (consultas.length > 0 && !consultaSeleccionada) {
-                  setConsultaSeleccionada(consultas[0]);
-                }
-              }}
-              className={`w-full text-left px-3 py-2.5 rounded-xl transition flex items-center gap-2.5 cursor-pointer ${
-                seccionActiva === 'inicio' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              🩺 Consulta en Pantalla
-            </button>
-            <button
-              onClick={() => setSeccionActiva('general')}
-              className={`w-full text-left px-3 py-2.5 rounded-xl transition flex items-center gap-2.5 cursor-pointer ${
-                seccionActiva === 'general' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              📋 Datos Generales / Ficha
-            </button>
-            <button
-              onClick={() => setSeccionActiva('recetas')}
-              className={`w-full text-left px-3 py-2.5 rounded-xl transition flex items-center gap-2.5 cursor-pointer ${
-                seccionActiva === 'recetas' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              💊 Todas las Recetas ({tratamientos.length})
-            </button>
+            <button onClick={() => { setSeccionActiva('inicio'); setModoCrear(false); setModoEditar(false); }} className={`w-full text-left px-3 py-2.5 rounded-xl transition ${seccionActiva === 'inicio' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}>🩺 Historial de Consultas</button>
+            <button onClick={() => setSeccionActiva('general')} className={`w-full text-left px-3 py-2.5 rounded-xl transition ${seccionActiva === 'general' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}>📋 Datos Generales / Ficha</button>
           </nav>
 
           <div className="p-4 border-t border-slate-100 text-xs text-slate-500 space-y-1.5 mt-auto">
-            <span className="font-bold text-[10px] text-slate-400 uppercase tracking-wider block">
-              Antecedentes Base
-            </span>
-            <p className="text-[11px] bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-slate-600">
-              {paciente.antecedentes || 'Sin antecedentes patológicos registrados.'}
-            </p>
-
-            {/* Botón de eliminar expediente completo */}
-            <div className="pt-3">
-              <button
-                onClick={handleEliminarExpediente}
-                className="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold py-2 px-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
-              >
-                🗑️ Eliminar Expediente
-              </button>
-            </div>
+            <span className="font-bold text-[10px] text-slate-400 uppercase tracking-wider block">Antecedentes Base</span>
+            <p className="text-[11px] bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-slate-600">{paciente.antecedentes || 'Sin antecedentes.'}</p>
+            <div className="pt-3"><button onClick={handleEliminarExpediente} className="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold py-2 px-3 rounded-xl transition cursor-pointer">🗑️ Eliminar Expediente</button></div>
           </div>
         </aside>
 
-        {/* ================= COLUMNA CENTRAL: ÁREA DE ATENCIÓN Y RECETAS ================= */}
-        <main className="flex-1 bg-white flex flex-col overflow-y-auto border-r border-slate-200">
+        {/* COLUMNA CENTRAL */}
+        <main className="flex-1 bg-white flex flex-col overflow-y-auto border-r border-slate-200 relative">
           
           <div className="px-6 py-3 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
             <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">
-              {seccionActiva === 'general'
-                ? 'Ficha y Antecedentes del Paciente'
-                : seccionActiva === 'recetas'
-                ? 'Historial Farmacológico Completo'
-                : modoCrear
-                ? '📝 Registrar Nueva Consulta Médica'
-                : modoEditar
-                ? '✏️ Editando Consulta Médica'
-                : '🔍 Historial Clínico de la Consulta'}
+              {seccionActiva === 'general' ? 'Ficha y Antecedentes' : modoCrear ? '📝 Nueva Atención' : modoEditar ? '✏️ Editando Consulta' : '🔍 Detalle de Consulta'}
             </h3>
-
             {seccionActiva === 'inicio' && (modoCrear || modoEditar) && (
               <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    setModoCrear(false);
-                    setModoEditar(false);
-                  }}
-                  className="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold px-3 py-1.5 rounded-xl transition cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleGuardarConsulta}
-                  disabled={guardando}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-1.5 rounded-xl shadow-xs transition disabled:opacity-50 cursor-pointer"
-                >
-                  {guardando ? 'Guardando...' : '💾 Guardar Cambios'}
-                </button>
+                <button onClick={() => { setModoCrear(false); setModoEditar(false); }} className="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold px-3 py-1.5 rounded-xl transition cursor-pointer">Cancelar</button>
+                <button onClick={handleGuardarConsulta} disabled={guardando} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-1.5 rounded-xl shadow-xs transition cursor-pointer">{guardando ? 'Guardando...' : '💾 Guardar Todo'}</button>
               </div>
             )}
           </div>
 
+          {/* BARRA DE PESTAÑAS INTERNAS TIPO ERP (SOLO EN VISTA DE CONSULTA) */}
+          {seccionActiva === 'inicio' && (modoCrear || modoEditar || consultaSeleccionada) && (
+            <div className="bg-slate-100/50 border-b border-slate-200 px-6 py-2 flex gap-2 shrink-0">
+              <button onClick={() => setSubTab('historia')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${subTab === 'historia' ? 'bg-white border border-slate-200 text-blue-700 shadow-sm' : 'text-slate-500 hover:bg-slate-200/50'}`}>📝 Historia Clínica</button>
+              <button onClick={() => setSubTab('receta')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${subTab === 'receta' ? 'bg-white border border-slate-200 text-blue-700 shadow-sm' : 'text-slate-500 hover:bg-slate-200/50'}`}>💊 Prescripción / Receta</button>
+              <button onClick={() => setSubTab('laboratorio')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${subTab === 'laboratorio' ? 'bg-white border border-slate-200 text-blue-700 shadow-sm' : 'text-slate-500 hover:bg-slate-200/50'}`}>🧪 Exámenes / Laboratorio</button>
+            </div>
+          )}
+
           <div className="p-6 flex-1">
-            
-            {/* VISTA 1: ATENCIÓN CLÍNICA (CREAR, EDITAR O VER) */}
             {seccionActiva === 'inicio' && (
               modoCrear || modoEditar ? (
-                /* FORMULARIO DE CREACIÓN O EDICIÓN */
-                <form onSubmit={handleGuardarConsulta} className="space-y-4 max-w-3xl">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 block mb-1">Motivo de Consulta / Síntomas</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Ej. Cefalea intensa de 48 horas..."
-                        value={formConsulta.motivo_consulta}
-                        onChange={(e) => setFormConsulta({ ...formConsulta, motivo_consulta: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 block mb-1">Médico que Atiende</label>
-                      <input
-                        type="text"
-                        value={formConsulta.doctor_nombre}
-                        onChange={(e) => setFormConsulta({ ...formConsulta, doctor_nombre: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Historia de la Enfermedad / Evolución</label>
-                    <textarea
-                      rows="3"
-                      placeholder="Describa el cuadro actual, exploración física y evolución del paciente..."
-                      value={formConsulta.enfermedad_actual}
-                      onChange={(e) => setFormConsulta({ ...formConsulta, enfermedad_actual: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Diagnóstico Clínico</label>
-                    <input
-                      type="text"
-                      placeholder="Ej. Migraña clásica con aura..."
-                      value={formConsulta.diagnostico}
-                      onChange={(e) => setFormConsulta({ ...formConsulta, diagnostico: e.target.value })}
-                      className="w-full bg-white border-2 border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 outline-none focus:border-blue-600"
-                    />
-                  </div>
-
-                  {/* SECCIÓN DE RECETA MÉDICA DINÁMICA */}
-                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h4 className="text-xs font-bold text-slate-800 uppercase flex items-center gap-1.5">
-                          💊 Receta Médica & Recordatorios WhatsApp
-                        </h4>
-                        <p className="text-[11px] text-slate-500">Agregue los fármacos indicados para este tratamiento</p>
+                <form id="form-consulta" onSubmit={handleGuardarConsulta} className="max-w-3xl">
+                  {subTab === 'historia' && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label className="text-xs font-bold text-slate-700 block mb-1">Motivo de Consulta</label><input required type="text" value={formConsulta.motivo_consulta} onChange={(e) => setFormConsulta({ ...formConsulta, motivo_consulta: e.target.value })} className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                        <div><label className="text-xs font-bold text-slate-700 block mb-1">Médico que Atiende</label><input type="text" value={formConsulta.doctor_nombre} onChange={(e) => setFormConsulta({ ...formConsulta, doctor_nombre: e.target.value })} className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500" /></div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={agregarMedicamento}
-                        className="text-xs font-bold text-blue-600 bg-white border border-blue-200 px-3 py-1 rounded-lg hover:bg-blue-50 transition cursor-pointer"
-                      >
-                        + Agregar Fármaco
-                      </button>
-                    </div>
-
-                    <div className="space-y-2">
-                      {medicamentos.map((item, idx) => (
-                        <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-2 bg-white p-2.5 rounded-xl border border-slate-200 items-center">
-                          <input
-                            type="text"
-                            placeholder="Medicamento (ej. Ibuprofeno 400mg)"
-                            value={item.medicamento}
-                            onChange={(e) => actualizarMedicamento(idx, 'medicamento', e.target.value)}
-                            className="md:col-span-4 border rounded-lg p-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500"
-                          />
-                          <input
-                            type="text"
-                            placeholder="Frecuencia (Cada 8 hrs)"
-                            value={item.frecuencia}
-                            onChange={(e) => actualizarMedicamento(idx, 'frecuencia', e.target.value)}
-                            className="md:col-span-3 border rounded-lg p-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500"
-                          />
-                          <input
-                            type="number"
-                            placeholder="Días (5)"
-                            value={item.dias_tratamiento}
-                            onChange={(e) => actualizarMedicamento(idx, 'dias_tratamiento', e.target.value)}
-                            className="md:col-span-2 border rounded-lg p-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500"
-                          />
-                          <input
-                            type="text"
-                            placeholder="Indicación (con comida)"
-                            value={item.indicacion}
-                            onChange={(e) => actualizarMedicamento(idx, 'indicacion', e.target.value)}
-                            className="md:col-span-2 border rounded-lg p-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500"
-                          />
-                          <div className="md:col-span-1 text-center">
-                            {medicamentos.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => eliminarMedicamento(idx)}
-                                className="text-rose-500 hover:text-rose-700 text-xs font-bold cursor-pointer"
-                              >
-                                ✕
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* ESTUDIOS CLÍNICOS / LABORATORIOS NUEVOS (SOLO AL CREAR) */}
-                  {modoCrear && (
-                    <div className="p-4 bg-blue-50/50 border border-blue-200 rounded-2xl space-y-3">
-                      <div className="flex justify-between items-center">
-                        <h4 className="text-xs font-bold text-blue-900 uppercase">🧪 Estudios Clínicos / Laboratorios Solicitados</h4>
-                        <button type="button" onClick={agregarEstudioNuevo} className="text-xs font-bold text-blue-600 bg-white border border-blue-200 px-3 py-1 rounded-lg hover:bg-blue-50 cursor-pointer">+ Agregar Examen</button>
-                      </div>
-                      <div className="space-y-2">
-                        {estudiosNuevos.map((est, idx) => (
-                          <div key={idx} className="grid grid-cols-1 md:grid-cols-11 gap-2 bg-white p-2.5 rounded-xl border border-blue-100 items-center">
-                            <input type="text" placeholder="Tipo de Estudio (Ej. Hemograma)" value={est.tipo_estudio} onChange={(e) => actualizarEstudioNuevo(idx, 'tipo_estudio', e.target.value)} className="md:col-span-4 border rounded-lg p-1.5 text-xs outline-none" />
-                            <input type="text" placeholder="Laboratorio" value={est.laboratorio} onChange={(e) => actualizarEstudioNuevo(idx, 'laboratorio', e.target.value)} className="md:col-span-3 border rounded-lg p-1.5 text-xs outline-none" />
-                            <input type="text" placeholder="Observaciones / Resultados" value={est.observaciones} onChange={(e) => actualizarEstudioNuevo(idx, 'observaciones', e.target.value)} className="md:col-span-3 border rounded-lg p-1.5 text-xs outline-none" />
-                            <div className="md:col-span-1 text-center">
-                              {estudiosNuevos.length > 1 && <button type="button" onClick={() => eliminarEstudioNuevo(idx)} className="text-rose-500 font-bold">✕</button>}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                      <div><label className="text-xs font-bold text-slate-700 block mb-1">Evolución / Enfermedad</label><textarea rows="3" value={formConsulta.enfermedad_actual} onChange={(e) => setFormConsulta({ ...formConsulta, enfermedad_actual: e.target.value })} className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                      <div><label className="text-xs font-bold text-slate-700 block mb-1">Diagnóstico Clínico</label><input type="text" value={formConsulta.diagnostico} onChange={(e) => setFormConsulta({ ...formConsulta, diagnostico: e.target.value })} className="w-full bg-white border-2 border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 outline-none focus:border-blue-600" /></div>
+                      <div><label className="text-[11px] font-semibold text-slate-600 block mb-1">Plan de Tratamiento / Cuidados</label><input type="text" value={formConsulta.plan_tratamiento} onChange={(e) => setFormConsulta({ ...formConsulta, plan_tratamiento: e.target.value })} className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs outline-none focus:ring-1 focus:ring-blue-500" /></div>
                     </div>
                   )}
-
-                  <div>
-                    <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-                      Indicaciones Generales / Recomendaciones de cuidado
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Ej. Reposo por 48 horas, hidratación y evitar lácteos..."
-                      value={formConsulta.plan_tratamiento}
-                      onChange={(e) => setFormConsulta({ ...formConsulta, plan_tratamiento: e.target.value })}
-                      className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
+                  {subTab === 'receta' && (
+                    <RecetaTab modoCrear={modoCrear} modoEditar={modoEditar} paciente={paciente} consultaSeleccionada={consultaSeleccionada} medicamentos={medicamentos} agregarMedicamento={agregarMedicamento} actualizarMedicamento={actualizarMedicamento} eliminarMedicamento={eliminarMedicamento} recetasDeConsulta={recetasDeConsulta} />
+                  )}
+                  {subTab === 'laboratorio' && (
+                    <LaboratorioTab modoCrear={modoCrear} modoEditar={modoEditar} paciente={paciente} consultaSeleccionada={consultaSeleccionada} estudiosNuevos={estudiosNuevos} agregarEstudioNuevo={agregarEstudioNuevo} actualizarEstudioNuevo={actualizarEstudioNuevo} eliminarEstudioNuevo={eliminarEstudioNuevo} estudiosDeConsulta={estudiosDeConsulta} setMostrarModalEstudio={setMostrarModalEstudio} handleEliminarEstudio={handleEliminarEstudio} />
+                  )}
                 </form>
               ) : (
-                /* VISTA DE SOLO LECTURA + BOTONES DE EDITAR Y ELIMINAR */
                 consultaSeleccionada ? (
-                  <div className="space-y-4 max-w-3xl">
-                    
-                    {/* Botones de Acción, Edición e Impresión */}
-                  <div className="flex flex-wrap justify-end gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
-                    <button
-                      onClick={imprimirReceta}
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition shadow-2xs flex items-center gap-1 cursor-pointer"
-                    >
-                      🖨️ Imprimir Receta
-                    </button>
-                    <button
-                      onClick={imprimirLaboratorio}
-                      className="bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition shadow-2xs flex items-center gap-1 cursor-pointer"
-                    >
-                      🧪 Imprimir Laboratorios
-                    </button>
-                    <button
-                      onClick={activarModoEdicion}
-                      className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition shadow-2xs flex items-center gap-1 cursor-pointer"
-                    >
-                      ✏️ Editar
-                    </button>
-                    <button
-                      onClick={handleEliminarConsulta}
-                      className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition shadow-2xs flex items-center gap-1 cursor-pointer"
-                    >
-                      🗑️ Eliminar
-                    </button>
-                  </div>
-
-                    <div className="border border-slate-200 rounded-2xl p-5 space-y-4 bg-white shadow-2xs">
-                      <div className="border-b pb-3 flex justify-between items-center">
-                        <div>
-                          <span className="text-[11px] text-blue-600 font-bold block uppercase">Atención Registrada</span>
-                          <h4 className="text-base font-bold text-slate-800">
-                            {consultaSeleccionada.fecha_formateada || String(consultaSeleccionada.fecha || '').slice(0, 16)}
-                          </h4>
-                          <span className="text-xs text-slate-500 font-medium">
-                            Médico: {consultaSeleccionada.doctor_nombre}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div>
-                        <span className="text-xs font-bold text-slate-500 uppercase block mb-1">Motivo de Consulta</span>
-                        <p className="text-xs text-slate-800 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                          {consultaSeleccionada.motivo_consulta || 'Sin registrar.'}
-                        </p>
-                      </div>
-
-                      {consultaSeleccionada.enfermedad_actual && (
-                        <div>
-                          <span className="text-xs font-bold text-slate-500 uppercase block mb-1">Evolución / Cuadro Clínico</span>
-                          <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                            {consultaSeleccionada.enfermedad_actual}
-                          </p>
-                        </div>
-                      )}
-
-                      <div>
-                        <span className="text-xs font-bold text-slate-500 uppercase block mb-1">Diagnóstico</span>
-                        <p className="text-xs font-bold text-blue-900 bg-blue-50/70 p-2.5 rounded-xl border border-blue-100">
-                          {consultaSeleccionada.diagnostico || 'Sin diagnóstico registrado.'}
-                        </p>
-                      </div>
-
-                      {consultaSeleccionada.plan_tratamiento && (
-                        <div>
-                          <span className="text-xs font-bold text-slate-500 uppercase block mb-1">Plan de Tratamiento / Indicaciones</span>
-                          <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                            {consultaSeleccionada.plan_tratamiento}
-                          </p>
-                        </div>
-                      )}
+                  <div className="max-w-3xl space-y-4">
+                    {/* Botones generales de edición */}
+                    <div className="flex flex-wrap justify-end gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
+                      <button onClick={activarModoEdicion} className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition cursor-pointer">✏️ Editar Consulta</button>
+                      <button onClick={handleEliminarConsulta} className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition cursor-pointer">🗑️ Eliminar Consulta</button>
                     </div>
 
-                    {/* MEDICAMENTOS DE ESTA CONSULTA */}
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-700 uppercase mb-2">
-                        Medicamentos Recetados en esta Atención ({recetasDeConsulta.length})
-                      </h4>
-                      {recetasDeConsulta.length === 0 ? (
-                        <p className="text-xs text-slate-400 italic bg-slate-50 p-3 rounded-xl border">
-                          No se emitieron medicamentos en esta atención.
-                        </p>
-                      ) : (
-                        <div className="space-y-2">
-                          {recetasDeConsulta.map((t) => (
-                            <div key={t.id} className="p-3 bg-white border border-slate-200 rounded-xl flex justify-between items-center text-xs shadow-2xs">
-                              <div>
-                                <span className="font-bold text-slate-800">{t.medicamento}</span>
-                                <span className="text-slate-500 block text-[11px]">{t.dosis_indicacion}</span>
-                              </div>
-                              <span className="font-mono text-emerald-600 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
-                                {t.dias_tratamiento} días
-                              </span>
-                            </div>
-                          ))}
+                    {subTab === 'historia' && (
+                      <div className="border border-slate-200 rounded-2xl p-5 space-y-4 bg-white shadow-2xs">
+                        <div className="border-b pb-3 flex justify-between items-center">
+                          <div><span className="text-[11px] text-blue-600 font-bold block uppercase">Atención Registrada</span><h4 className="text-base font-bold text-slate-800">{consultaSeleccionada.fecha_formateada || String(consultaSeleccionada.fecha || '').slice(0, 16)}</h4><span className="text-xs text-slate-500 font-medium">Médico: {consultaSeleccionada.doctor_nombre}</span></div>
                         </div>
-                      )}
-                    </div>
-
-                    {/* ESTUDIOS CLÍNICOS DE ESTA CONSULTA */}
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <h4 className="text-xs font-bold text-blue-900 uppercase">
-                          🧪 Estudios Clínicos / Laboratorios ({estudiosDeConsulta.length})
-                        </h4>
-                        <button
-                          onClick={() => setMostrarModalEstudio(true)}
-                          className="text-xs font-bold text-blue-600 bg-blue-50 border border-blue-200 px-3 py-1 rounded-lg hover:bg-blue-100 cursor-pointer"
-                        >
-                          + Agregar Examen
-                        </button>
+                        <div><span className="text-xs font-bold text-slate-500 uppercase block mb-1">Motivo de Consulta</span><p className="text-xs text-slate-800 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.motivo_consulta || 'Sin registrar.'}</p></div>
+                        {consultaSeleccionada.enfermedad_actual && (<div><span className="text-xs font-bold text-slate-500 uppercase block mb-1">Evolución</span><p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.enfermedad_actual}</p></div>)}
+                        <div><span className="text-xs font-bold text-slate-500 uppercase block mb-1">Diagnóstico</span><p className="text-xs font-bold text-blue-900 bg-blue-50/70 p-2.5 rounded-xl border border-blue-100">{consultaSeleccionada.diagnostico || 'N/D'}</p></div>
+                        {consultaSeleccionada.plan_tratamiento && (<div><span className="text-xs font-bold text-slate-500 uppercase block mb-1">Plan / Indicaciones</span><p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.plan_tratamiento}</p></div>)}
                       </div>
-                      {estudiosDeConsulta.length === 0 ? (
-                        <p className="text-xs text-slate-400 italic bg-slate-50 p-3 rounded-xl border">
-                          No hay estudios clínicos registrados para esta fecha.
-                        </p>
-                      ) : (
-                        <div className="space-y-2">
-                          {estudiosDeConsulta.map((est) => (
-                            <div key={est.id} className="p-3 bg-blue-50/40 border border-blue-200 rounded-xl flex justify-between items-center text-xs">
-                              <div>
-                                <span className="font-bold text-blue-900">{est.tipo_estudio}</span>
-                                <span className="text-slate-600 block text-[11px]">Lab: {est.laboratorio || 'No especificado'} | Obs: {est.observaciones || 'Ninguna'}</span>
-                              </div>
-                              <button
-                                onClick={() => handleEliminarEstudio(est.id)}
-                                className="text-rose-500 hover:text-rose-700 font-bold cursor-pointer"
-                              >
-                                🗑️
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
+                    )}
+                    {subTab === 'receta' && (
+                      <RecetaTab modoCrear={false} modoEditar={false} paciente={paciente} consultaSeleccionada={consultaSeleccionada} recetasDeConsulta={recetasDeConsulta} />
+                    )}
+                    {subTab === 'laboratorio' && (
+                      <LaboratorioTab modoCrear={false} modoEditar={false} paciente={paciente} consultaSeleccionada={consultaSeleccionada} estudiosDeConsulta={estudiosDeConsulta} setMostrarModalEstudio={setMostrarModalEstudio} handleEliminarEstudio={handleEliminarEstudio} />
+                    )}
                   </div>
                 ) : (
-                  <div className="text-center py-16 text-slate-400 text-xs">
-                    Selecciona una atención del historial o crea una nueva.
-                  </div>
+                  <div className="text-center py-16 text-slate-400 text-xs">Selecciona una atención del historial o crea una nueva.</div>
                 )
               )
             )}
 
-            {/* VISTA 2: DATOS GENERALES (CON CAMPO DE FOTO URL) */}
             {seccionActiva === 'general' && (
               <form onSubmit={handleGuardarGeneral} className="space-y-4 max-w-2xl">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Nombre Completo</label>
-                    <input
-                      type="text"
-                      value={formGeneral.nombre}
-                      onChange={(e) => setFormGeneral({ ...formGeneral, nombre: e.target.value })}
-                      className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Teléfono WhatsApp</label>
-                    <input
-                      type="text"
-                      value={formGeneral.telefono}
-                      onChange={(e) => setFormGeneral({ ...formGeneral, telefono: e.target.value })}
-                      className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:border-blue-500 font-mono"
-                    />
-                  </div>
+                  <div><label className="text-xs font-bold text-slate-700 block mb-1">Nombre Completo</label><input type="text" value={formGeneral.nombre} onChange={(e) => setFormGeneral({ ...formGeneral, nombre: e.target.value })} className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:border-blue-500" /></div>
+                  <div><label className="text-xs font-bold text-slate-700 block mb-1">Teléfono WhatsApp</label><input type="text" value={formGeneral.telefono} onChange={(e) => setFormGeneral({ ...formGeneral, telefono: e.target.value })} className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:border-blue-500 font-mono" /></div>
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Fecha de Nacimiento</label>
-                    <input
-                      type="date"
-                      value={formGeneral.fecha_nacimiento}
-                      onChange={(e) => setFormGeneral({ ...formGeneral, fecha_nacimiento: e.target.value })}
-                      className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Género</label>
-                    <select
-                      value={formGeneral.sexo}
-                      onChange={(e) => setFormGeneral({ ...formGeneral, sexo: e.target.value })}
-                      className="w-full border border-slate-300 rounded-xl p-2 text-xs bg-white outline-none focus:border-blue-500"
-                    >
-                      <option value="M">Masculino</option>
-                      <option value="F">Femenino</option>
-                      <option value="Otro">Otro</option>
-                    </select>
-                  </div>
+                  <div><label className="text-xs font-bold text-slate-700 block mb-1">Fecha de Nacimiento</label><input type="date" value={formGeneral.fecha_nacimiento} onChange={(e) => setFormGeneral({ ...formGeneral, fecha_nacimiento: e.target.value })} className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:border-blue-500" /></div>
+                  <div><label className="text-xs font-bold text-slate-700 block mb-1">Género</label><select value={formGeneral.sexo} onChange={(e) => setFormGeneral({ ...formGeneral, sexo: e.target.value })} className="w-full border border-slate-300 rounded-xl p-2 text-xs bg-white outline-none focus:border-blue-500"><option value="M">Masculino</option><option value="F">Femenino</option><option value="Otro">Otro</option></select></div>
                 </div>
-
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">URL de la Foto de Perfil (Opcional)</label>
-                  <input
-                    type="url"
-                    placeholder="https://ejemplo.com/foto-paciente.jpg"
-                    value={formGeneral.foto_url}
-                    onChange={(e) => setFormGeneral({ ...formGeneral, foto_url: e.target.value })}
-                    className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:border-blue-500 font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">Alergias Conocidas</label>
-                  <input
-                    type="text"
-                    value={formGeneral.alergias}
-                    onChange={(e) => setFormGeneral({ ...formGeneral, alergias: e.target.value })}
-                    className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:border-blue-500"
-                    placeholder="Ej. Penicilina, AINES, Ninguna"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">Antecedentes Generales</label>
-                  <textarea
-                    rows="3"
-                    value={formGeneral.antecedentes}
-                    onChange={(e) => setFormGeneral({ ...formGeneral, antecedentes: e.target.value })}
-                    className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:border-blue-500"
-                    placeholder="Ej. Diabetes tipo 2 controlada, hipertensión..."
-                  />
-                </div>
-
-                <div className="pt-2 flex justify-end">
-                  <button
-                    type="submit"
-                    disabled={guardandoGeneral}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2 rounded-xl shadow transition disabled:opacity-50 cursor-pointer"
-                  >
-                    {guardandoGeneral ? 'Guardando...' : '💾 Guardar Ficha'}
-                  </button>
-                </div>
+                <div><label className="text-xs font-bold text-slate-700 block mb-1">URL Foto (Opcional)</label><input type="url" value={formGeneral.foto_url} onChange={(e) => setFormGeneral({ ...formGeneral, foto_url: e.target.value })} className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:border-blue-500 font-mono" /></div>
+                <div><label className="text-xs font-bold text-slate-700 block mb-1">Alergias</label><input type="text" value={formGeneral.alergias} onChange={(e) => setFormGeneral({ ...formGeneral, alergias: e.target.value })} className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:border-blue-500" /></div>
+                <div><label className="text-xs font-bold text-slate-700 block mb-1">Antecedentes Generales</label><textarea rows="3" value={formGeneral.antecedentes} onChange={(e) => setFormGeneral({ ...formGeneral, antecedentes: e.target.value })} className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:border-blue-500" /></div>
+                <div className="pt-2 flex justify-end"><button type="submit" disabled={guardandoGeneral} className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2 rounded-xl shadow transition cursor-pointer">{guardandoGeneral ? 'Guardando...' : '💾 Guardar Ficha'}</button></div>
               </form>
             )}
-
-            {/* VISTA 3: TODAS LAS RECETAS */}
-            {seccionActiva === 'recetas' && (
-              <div className="space-y-3">
-                {tratamientos.length === 0 ? (
-                  <p className="text-xs text-slate-400">No hay recetas registradas en este expediente.</p>
-                ) : (
-                  tratamientos.map((t) => (
-                    <div key={t.id} className="p-4 border border-slate-200 rounded-2xl space-y-2 bg-white shadow-2xs">
-                      <div className="flex justify-between items-center">
-                        <span className="font-bold text-slate-800 text-sm">{t.medicamento}</span>
-                        <span className="text-xs font-bold px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg">
-                          {t.porcentaje_cumplimiento || 0}% Apego WhatsApp
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-600">{t.dosis_indicacion}</p>
-                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                        <div className="bg-emerald-500 h-full" style={{ width: `${t.porcentaje_cumplimiento || 0}%` }} />
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-
           </div>
         </main>
 
-        {/* ================= COLUMNA DERECHA: ACCIONES Y ATENCIONES ANTERIORES ================= */}
+        {/* COLUMNA DERECHA */}
         <aside className="w-72 bg-slate-50 flex flex-col shrink-0 overflow-y-auto p-4 space-y-4 border-l border-slate-200">
-          
           <div className="space-y-2">
-            <button
-              onClick={() => {
-                setModoCrear(true);
-                setModoEditar(false);
-                setSeccionActiva('inicio');
-                setFormConsulta({
-                  doctor_nombre: 'Dra. Consulta',
-                  motivo_consulta: '',
-                  enfermedad_actual: '',
-                  antecedentes_patologicos: '',
-                  diagnostico: '',
-                  plan_tratamiento: ''
-                });
-                setMedicamentos([{ medicamento: '', frecuencia: 'Cada 8 horas', dias_tratamiento: 5, indicacion: '' }]);
-              }}
-              className="w-full bg-[#10a37f] hover:bg-emerald-700 text-white font-bold text-xs p-2.5 rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              ➕ Nueva Atención / Consulta
-            </button>
-
-            <button
-              onClick={() => onAgendarCita(paciente)}
-              className="w-full bg-white border border-slate-300 hover:bg-blue-50 text-slate-700 font-bold text-xs p-2.5 rounded-xl shadow-2xs transition flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              📅 Agendar Cita Futura
-            </button>
+            <button onClick={() => { setModoCrear(true); setModoEditar(false); setSeccionActiva('inicio'); setSubTab('historia'); setFormConsulta({ doctor_nombre: 'Dra. Consulta', motivo_consulta: '', enfermedad_actual: '', antecedentes_patologicos: '', diagnostico: '', plan_tratamiento: '' }); setMedicamentos([{ medicamento: '', frecuencia: 'Cada 8 horas', dias_tratamiento: 5, indicacion: '' }]); setEstudiosNuevos([{ tipo_estudio: '', laboratorio: '', observaciones: '' }]); }} className="w-full bg-[#10a37f] hover:bg-emerald-700 text-white font-bold text-xs p-2.5 rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">➕ Nueva Consulta</button>
+            <button onClick={() => onAgendarCita(paciente)} className="w-full bg-white border border-slate-300 hover:bg-blue-50 text-slate-700 font-bold text-xs p-2.5 rounded-xl shadow-2xs transition flex items-center justify-center gap-1.5 cursor-pointer">📅 Agendar Cita</button>
           </div>
-
           <div className="flex-1">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
-              Historial de Atenciones ({consultas.length})
-            </span>
-
-            {consultas.length === 0 ? (
-              <p className="text-xs text-slate-400 italic">No hay atenciones pasadas.</p>
-            ) : (
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">Historial ({consultas.length})</span>
+            {consultas.length === 0 ? (<p className="text-xs text-slate-400 italic">No hay atenciones pasadas.</p>) : (
               <div className="space-y-2">
                 {consultas.map((c) => {
                   const activa = !modoCrear && !modoEditar && consultaSeleccionada?.id === c.id;
                   const fechaStr = c.fecha_formateada ? c.fecha_formateada.slice(0, 10) : (c.fecha ? String(c.fecha).slice(0, 10) : 'Fecha');
                   const horaStr = c.fecha_formateada ? c.fecha_formateada.slice(11, 16) : (c.fecha ? String(c.fecha).slice(11, 16) : '');
-
                   return (
-                    <button
-                      key={c.id}
-                      onClick={() => {
-                        setConsultaSeleccionada(c);
-                        setModoCrear(false);
-                        setModoEditar(false);
-                        setSeccionActiva('inicio');
-                      }}
-                      className={`w-full text-left p-3 rounded-xl border text-xs transition cursor-pointer flex flex-col gap-1 ${
-                        activa
-                          ? 'bg-[#1b4e7b] border-[#1b4e7b] text-white font-bold shadow-xs'
-                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-                      }`}
-                    >
-                      <div className="flex justify-between items-center">
-                        <span className={`text-xs font-bold ${activa ? 'text-white' : 'text-slate-800'}`}>
-                          📅 {fechaStr}
-                        </span>
-                        <span className={`text-[10px] font-mono ${activa ? 'text-blue-200' : 'text-slate-400'}`}>
-                          {horaStr} hrs
-                        </span>
-                      </div>
-
-                      <span className={`block text-[11px] truncate mt-0.5 ${activa ? 'text-blue-100' : 'text-slate-500'}`}>
-                        {c.doctor_nombre}
-                      </span>
-
-                      {c.diagnostico && (
-                        <span className={`block text-[10px] truncate italic ${activa ? 'text-blue-100' : 'text-blue-600'}`}>
-                          Dx: {c.diagnostico}
-                        </span>
-                      )}
+                    <button key={c.id} onClick={() => { setConsultaSeleccionada(c); setModoCrear(false); setModoEditar(false); setSeccionActiva('inicio'); setSubTab('historia'); }} className={`w-full text-left p-3 rounded-xl border text-xs transition cursor-pointer flex flex-col gap-1 ${activa ? 'bg-[#1b4e7b] border-[#1b4e7b] text-white font-bold shadow-xs' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'}`}>
+                      <div className="flex justify-between items-center"><span className={`text-xs font-bold ${activa ? 'text-white' : 'text-slate-800'}`}>📅 {fechaStr}</span><span className={`text-[10px] font-mono ${activa ? 'text-blue-200' : 'text-slate-400'}`}>{horaStr} hrs</span></div>
+                      <span className={`block text-[11px] truncate mt-0.5 ${activa ? 'text-blue-100' : 'text-slate-500'}`}>{c.doctor_nombre}</span>
+                      {c.diagnostico && (<span className={`block text-[10px] truncate italic ${activa ? 'text-blue-100' : 'text-blue-600'}`}>Dx: {c.diagnostico}</span>)}
                     </button>
                   );
                 })}
@@ -1108,63 +343,23 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
 
       </div>
 
-      {/* MODAL PARA AGREGAR ESTUDIO RÁPIDO A CONSULTA EXISTENTE */}
+      {/* MODAL PARA AGREGAR ESTUDIO RÁPIDO */}
       {mostrarModalEstudio && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4 shadow-xl">
-            <h3 className="text-sm font-bold text-slate-800">Agregar Estudio Clínico / Laboratorio</h3>
+            <h3 className="text-sm font-bold text-slate-800">Agregar Estudio Clínico</h3>
             <form onSubmit={handleAgregarEstudioRapido} className="space-y-3">
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Tipo de Estudio</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ej. Perfil Lipídico, Hemograma..."
-                  value={formEstudioRapido.tipo_estudio}
-                  onChange={(e) => setFormEstudioRapido({ ...formEstudioRapido, tipo_estudio: e.target.value })}
-                  className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Laboratorio</label>
-                <input
-                  type="text"
-                  placeholder="Ej. Lab. Clínico La Paz"
-                  value={formEstudioRapido.laboratorio}
-                  onChange={(e) => setFormEstudioRapido({ ...formEstudioRapido, laboratorio: e.target.value })}
-                  className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Observaciones / Resultados</label>
-                <textarea
-                  rows="2"
-                  placeholder="Detalles del estudio..."
-                  value={formEstudioRapido.observaciones}
-                  onChange={(e) => setFormEstudioRapido({ ...formEstudioRapido, observaciones: e.target.value })}
-                  className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+              <div><label className="text-xs font-bold text-slate-700 block mb-1">Estudio</label><input required type="text" value={formEstudioRapido.tipo_estudio} onChange={(e) => setFormEstudioRapido({ ...formEstudioRapido, tipo_estudio: e.target.value })} className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:ring-2 focus:ring-blue-500" /></div>
+              <div><label className="text-xs font-bold text-slate-700 block mb-1">Laboratorio</label><input type="text" value={formEstudioRapido.laboratorio} onChange={(e) => setFormEstudioRapido({ ...formEstudioRapido, laboratorio: e.target.value })} className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:ring-2 focus:ring-blue-500" /></div>
+              <div><label className="text-xs font-bold text-slate-700 block mb-1">Observaciones</label><textarea rows="2" value={formEstudioRapido.observaciones} onChange={(e) => setFormEstudioRapido({ ...formEstudioRapido, observaciones: e.target.value })} className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:ring-2 focus:ring-blue-500" /></div>
               <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setMostrarModalEstudio(false)}
-                  className="px-3 py-1.5 border rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 cursor-pointer"
-                >
-                  Guardar Estudio
-                </button>
+                <button type="button" onClick={() => setMostrarModalEstudio(false)} className="px-3 py-1.5 border rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 cursor-pointer">Cancelar</button>
+                <button type="submit" className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 cursor-pointer">Guardar</button>
               </div>
             </form>
           </div>
         </div>
       )}
-
     </div>
   );
 }
