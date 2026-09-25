@@ -666,6 +666,22 @@ app.get('/api/ping', (req, res) => {
   res.status(200).send('pong');
 });
 
+app.put('/api/estudios-clinicos/:id/resultado', async (req, res) => {
+  const { id } = req.params;
+  const { resultados_texto, documento_url, estado } = req.body;
+  try {
+    await pool.query(
+      `UPDATE estudios_clinicos 
+       SET resultados_texto = ?, documento_url = ?, estado = COALESCE(?, 'Completado') 
+       WHERE id = ?`,
+      [resultados_texto || null, documento_url || null, estado, id]
+    );
+    res.json({ ok: true, mensaje: 'Resultados del estudio guardados correctamente' });
+  } catch (err) {
+    console.error('Error al actualizar resultado de estudio:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor backend escuchando en http://localhost:${PORT}`);
