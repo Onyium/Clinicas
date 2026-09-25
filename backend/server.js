@@ -37,6 +37,10 @@ function calcularHoraFin(horaInicio, duracionMinutos) {
   return String(date.getHours()).padStart(2, '0') + ':' + 
          String(date.getMinutes()).padStart(2, '0') + ':00';
 }
+
+// ==========================================
+// AUTENTICACIÓN
+// ==========================================
 app.post('/api/login', async (req, res) => {
   const { usuario, password } = req.body;
   try {
@@ -55,17 +59,19 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+// ==========================================
+// CONFIGURACIÓN DE LA CLÍNICA (ÚNICA Y BLINDADA)
+// ==========================================
 app.get('/api/configuracion', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM configuracion WHERE id = 1');
-    res.json(rows[0] || {});
+    res.json(rows[0] || { nombre_clinica: 'Consultorio Médico' });
   } catch (err) {
     console.error('Error al obtener configuracion:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// 2. Guardar configuración de la clínica
 app.put('/api/configuracion', async (req, res) => {
   const { 
     nombre_clinica, 
@@ -113,10 +119,12 @@ app.put('/api/configuracion', async (req, res) => {
   }
 });
 
-// Endpoint de prueba inmediata para disparar recordatorios diarios sin esperar el cron
+// ==========================================
+// RECORDATORIOS Y PRUEBAS
+// ==========================================
 app.get('/api/test/enviar-recordatorios', async (req, res) => {
   try {
-    console.log('\n🧪 [TEST] Ejecutando manualmente el envío de recordatorios de medicamentos...');
+    console.log('\n🧪 [TEST] Ejecutando recordatorios de medicamentos...');
     await procesarRecordatoriosMedicamentos();
     res.json({ ok: true, mensaje: 'Recordatorios ejecutados exitosamente en segundo plano' });
   } catch (err) {
@@ -125,7 +133,19 @@ app.get('/api/test/enviar-recordatorios', async (req, res) => {
   }
 });
 
-// GET /api/citas
+app.post('/api/test/enviar-recordatorio-cita/:cita_id', async (req, res) => {
+  const { cita_id } = req.params;
+  try {
+    await enviarRecordatorioPorCita(cita_id);
+    res.json({ ok: true, mensaje: `Recordatorio enviado para la cita #${cita_id}` });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// CITAS Y CALENDARIO
+// ==========================================
 app.get('/api/citas', async (req, res) => {
   const usuarioId = req.headers['x-usuario-id'] || 1;
   try {
@@ -139,7 +159,6 @@ app.get('/api/citas', async (req, res) => {
   }
 });
 
-// POST /api/citas
 app.post('/api/citas', async (req, res) => {
   const usuarioId = req.headers['x-usuario-id'] || 1;
   const { paciente_id, paciente_nombre, paciente_telefono, doctor_id, doctor_nombre, fecha_cita, hora_cita, duracion_minutos, indicaciones, estado } = req.body;
@@ -156,7 +175,6 @@ app.post('/api/citas', async (req, res) => {
   }
 });
 
-// 5. Editar cita
 app.put('/api/citas/:id', async (req, res) => {
   const { id } = req.params;
   const { paciente_nombre, paciente_telefono, doctor_nombre, fecha_cita, hora_cita, duracion_minutos, indicaciones, estado } = req.body;
@@ -203,7 +221,6 @@ app.put('/api/citas/:id', async (req, res) => {
   }
 });
 
-// 6. Eliminar cita
 app.delete('/api/citas/:id', async (req, res) => {
   try {
     await pool.query('DELETE FROM citas WHERE id = ?', [req.params.id]);
@@ -213,7 +230,6 @@ app.delete('/api/citas/:id', async (req, res) => {
   }
 });
 
-// 7. Botón de Emergencia
 app.post('/api/citas/cancelar-jornada', async (req, res) => {
   const { fecha, doctor_nombre } = req.body;
   if (!fecha || !doctor_nombre) {
@@ -223,7 +239,9 @@ app.post('/api/citas/cancelar-jornada', async (req, res) => {
   res.json({ message: 'Proceso de notificación de emergencia iniciado' });
 });
 
-// Obtener doctores activos
+// ==========================================
+// DOCTORES
+// ==========================================
 app.get('/api/doctores', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM doctores WHERE activo = TRUE ORDER BY nombre ASC');
@@ -233,7 +251,6 @@ app.get('/api/doctores', async (req, res) => {
   }
 });
 
-// Bloquear fecha por ausencia
 app.post('/api/doctores/bloquear-fecha', async (req, res) => {
   const { doctor_id, fecha, motivo } = req.body;
   try {
@@ -256,6 +273,9 @@ app.post('/api/doctores/bloquear-fecha', async (req, res) => {
   }
 });
 
+// ==========================================
+// RECETAS INDEPENDIENTES
+// ==========================================
 app.post('/api/recetas/multiple', async (req, res) => {
   const { cita_id, paciente_nombre, paciente_telefono, doctor_nombre, medicamentos } = req.body;
 
@@ -296,23 +316,9 @@ app.post('/api/recetas/multiple', async (req, res) => {
   }
 });
 
-app.post('/api/test/enviar-recordatorio-cita/:cita_id', async (req, res) => {
-  const { cita_id } = req.params;
-  try {
-    await enviarRecordatorioPorCita(cita_id);
-    res.json({ ok: true, mensaje: `Recordatorio enviado para la cita #${cita_id}` });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-
 // ==========================================
-// MÓDULO DE EXPEDIENTES CLÍNICOS Y CONSULTAS
+// MÓDULO DE PACIENTES Y EXPEDIENTES
 // ==========================================
-
-// 1. Listar pacientes
-// GET /api/pacientes
 app.get('/api/pacientes', async (req, res) => {
   const usuarioId = req.headers['x-usuario-id'] || 1;
   const q = req.query.q || '';
@@ -329,7 +335,6 @@ app.get('/api/pacientes', async (req, res) => {
   }
 });
 
-// POST /api/pacientes (Crear paciente amarrado a este doctor)
 app.post('/api/pacientes', async (req, res) => {
   const usuarioId = req.headers['x-usuario-id'] || 1;
   const { nombre, telefono, fecha_nacimiento, sexo, alergias, antecedentes } = req.body;
@@ -346,20 +351,15 @@ app.post('/api/pacientes', async (req, res) => {
   }
 });
 
-
-
-// Eliminar un paciente completo y todo su historial clínico
 app.delete('/api/pacientes/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    // Opcional: Eliminar recetas, estudios y consultas asociadas para evitar errores de llave foránea
     await pool.query('DELETE FROM tomas_medicamentos WHERE receta_id IN (SELECT id FROM recetas_medicamentos WHERE paciente_id = ?)', [id]);
     await pool.query('DELETE FROM recetas_medicamentos WHERE paciente_id = ?', [id]);
     await pool.query('DELETE FROM estudios_clinicos WHERE paciente_id = ?', [id]);
     await pool.query('DELETE FROM consultas_medicas WHERE paciente_id = ?', [id]);
     await pool.query('DELETE FROM citas WHERE paciente_id = ?', [id]);
     
-    // Finalmente, eliminar al paciente
     const [result] = await pool.query('DELETE FROM pacientes WHERE id = ?', [id]);
     
     if (result.affectedRows === 0) {
@@ -373,7 +373,9 @@ app.delete('/api/pacientes/:id', async (req, res) => {
   }
 });
 
-// 3. REGISTRAR CONSULTA MÉDICA INDEPENDIENTE CON RECETA
+// ==========================================
+// CONSULTAS MÉDICAS (CON SIGNOS VITALES)
+// ==========================================
 app.post('/api/consultas-independientes', async (req, res) => {
   const {
     paciente_id,
@@ -381,10 +383,14 @@ app.post('/api/consultas-independientes', async (req, res) => {
     motivo_consulta,
     enfermedad_actual,
     antecedentes_patologicos,
-    examen_fisico,         // <--- NUEVO CAMPO
-    reporte_examenes,      // <--- NUEVO CAMPO
+    examen_fisico,
+    reporte_examenes,
     diagnostico,
     plan_tratamiento,
+    peso,
+    talla,
+    temperatura,
+    presion_arterial,
     medicamentos
   } = req.body;
 
@@ -395,18 +401,22 @@ app.post('/api/consultas-independientes', async (req, res) => {
   try {
     const [result] = await pool.query(
       `INSERT INTO consultas_medicas 
-       (paciente_id, doctor_nombre, motivo_consulta, enfermedad_actual, antecedentes_patologicos, examen_fisico, reporte_examenes, diagnostico, plan_tratamiento)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (paciente_id, doctor_nombre, motivo_consulta, enfermedad_actual, antecedentes_patologicos, examen_fisico, reporte_examenes, diagnostico, plan_tratamiento, peso, talla, temperatura, presion_arterial)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         paciente_id,
         doctor_nombre || 'Dr(a). Consulta',
         motivo_consulta || 'Control / Consulta',
         enfermedad_actual || null,
         antecedentes_patologicos || null,
-        examen_fisico || null,       // <--- NUEVO CAMPO
-        reporte_examenes || null,    // <--- NUEVO CAMPO
+        examen_fisico || null,
+        reporte_examenes || null,
         diagnostico || null,
-        plan_tratamiento || null
+        plan_tratamiento || null,
+        peso || null,
+        talla || null,
+        temperatura || null,
+        presion_arterial || null
       ]
     );
 
@@ -449,18 +459,21 @@ app.post('/api/consultas-independientes', async (req, res) => {
   }
 });
 
-// 4. ACTUALIZAR CONSULTA INDEPENDIENTE
 app.put('/api/consultas-independientes/:id', async (req, res) => {
   const { id } = req.params;
   const {
-    doctor_nombre,         // <--- Aseguramos que venga el doctor también
+    doctor_nombre,
     motivo_consulta,
     enfermedad_actual,
     antecedentes_patologicos,
-    examen_fisico,         // <--- NUEVO CAMPO
-    reporte_examenes,      // <--- NUEVO CAMPO
+    examen_fisico,
+    reporte_examenes,
     diagnostico,
     plan_tratamiento,
+    peso,
+    talla,
+    temperatura,
+    presion_arterial,
     medicamentos
   } = req.body;
 
@@ -468,17 +481,22 @@ app.put('/api/consultas-independientes/:id', async (req, res) => {
     await pool.query(
       `UPDATE consultas_medicas 
        SET doctor_nombre = COALESCE(?, doctor_nombre), motivo_consulta = ?, enfermedad_actual = ?, antecedentes_patologicos = ?, 
-           examen_fisico = ?, reporte_examenes = ?, diagnostico = ?, plan_tratamiento = ?
+           examen_fisico = ?, reporte_examenes = ?, diagnostico = ?, plan_tratamiento = ?,
+           peso = ?, talla = ?, temperatura = ?, presion_arterial = ?
        WHERE id = ?`,
       [
         doctor_nombre || null,
         motivo_consulta || null,
         enfermedad_actual || null,
         antecedentes_patologicos || null,
-        examen_fisico || null,       // <--- NUEVO CAMPO
-        reporte_examenes || null,    // <--- NUEVO CAMPO
+        examen_fisico || null,
+        reporte_examenes || null,
         diagnostico || null,
         plan_tratamiento || null,
+        peso || null,
+        talla || null,
+        temperatura || null,
+        presion_arterial || null,
         id
       ]
     );
@@ -519,11 +537,10 @@ app.put('/api/consultas-independientes/:id', async (req, res) => {
   }
 });
 
-// 5. ELIMINAR CONSULTA INDEPENDIENTE
 app.delete('/api/consultas-independientes/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    await pool.query('DELETE FROM estudios_clinicos WHERE consulta_id = ?', [id]); // <--- Limpieza en cascada extra
+    await pool.query('DELETE FROM estudios_clinicos WHERE consulta_id = ?', [id]);
     await pool.query('DELETE FROM recetas_medicamentos WHERE consulta_id = ?', [id]);
     await pool.query('DELETE FROM consultas_medicas WHERE id = ?', [id]);
     res.json({ ok: true, mensaje: 'Consulta eliminada del expediente' });
@@ -533,7 +550,9 @@ app.delete('/api/consultas-independientes/:id', async (req, res) => {
   }
 });
 
-// 6. OBTENER EXPEDIENTE COMPLETO DEL PACIENTE (CON ESTUDIOS CLÍNICOS)
+// ==========================================
+// EXPEDIENTE DETALLADO
+// ==========================================
 app.get('/api/pacientes/:id', async (req, res) => {
   const { id } = req.params;
 
@@ -547,7 +566,8 @@ app.get('/api/pacientes/:id', async (req, res) => {
     const [consultas] = await pool.query(
       `SELECT id, DATE_FORMAT(fecha, '%Y-%m-%d %H:%i') as fecha_formateada, 
               doctor_nombre, motivo_consulta, enfermedad_actual, 
-              antecedentes_patologicos,examen_fisico, reporte_examenes, diagnostico, plan_tratamiento, fecha
+              antecedentes_patologicos, examen_fisico, reporte_examenes, 
+              diagnostico, plan_tratamiento, peso, talla, temperatura, presion_arterial, fecha
        FROM consultas_medicas 
        WHERE paciente_id = ? 
        ORDER BY fecha DESC`,
@@ -561,7 +581,6 @@ app.get('/api/pacientes/:id', async (req, res) => {
       [id]
     );
 
-    // NUEVO: Obtener los estudios clínicos de este paciente
     const [estudios] = await pool.query(
       `SELECT * FROM estudios_clinicos 
        WHERE paciente_id = ? 
@@ -592,18 +611,17 @@ app.get('/api/pacientes/:id', async (req, res) => {
       paciente,
       consultas,
       tratamientos: recetasConSeguimiento,
-      estudios // <-- Se incluye aquí para que el frontend pueda filtrarlos por cada consulta_id
+      estudios
     });
   } catch (error) {
     console.error('Error al obtener expediente:', error);
     res.status(500).json({ error: 'Error al cargar expediente' });
   }
 });
-// ==========================================
-// MÓDULO DE ESTUDIOS CLÍNICOS / LABORATORIOS
-// ==========================================
 
-// 1. Registrar un estudio clínico para una consulta específica
+// ==========================================
+// ESTUDIOS CLÍNICOS
+// ==========================================
 app.post('/api/estudios-clinicos', async (req, res) => {
   const { consulta_id, paciente_id, tipo_estudio, laboratorio, observaciones, archivo_url } = req.body;
 
@@ -633,7 +651,6 @@ app.post('/api/estudios-clinicos', async (req, res) => {
   }
 });
 
-// 2. Eliminar un estudio clínico
 app.delete('/api/estudios-clinicos/:id', async (req, res) => {
   const { id } = req.params;
   try {
@@ -647,60 +664,6 @@ app.delete('/api/estudios-clinicos/:id', async (req, res) => {
 
 app.get('/api/ping', (req, res) => {
   res.status(200).send('pong');
-});
-
-// 1. Obtener los datos del consultorio (para recetas y encabezados)
-app.get('/api/configuracion', async (req, res) => {
-  try {
-    const [rows] = await pool.query('SELECT * FROM configuracion LIMIT 1');
-    res.json(rows[0] || { nombre_clinica: 'Consultorio Médico' });
-  } catch (err) {
-    console.error('Error al obtener configuracion:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 2. Guardar cambios de configuración desde el modal del engranaje ⚙️
-app.put('/api/configuracion', async (req, res) => {
-  const { 
-    nombre_clinica, 
-    eslogan, 
-    telefono_clinica, 
-    direccion, 
-    logo_url, 
-    hora_apertura, 
-    hora_cierre, 
-    duracion_defecto_minutos 
-  } = req.body;
-
-  try {
-    await pool.query(`
-      UPDATE configuracion 
-      SET nombre_clinica = COALESCE(?, nombre_clinica),
-          eslogan = ?,
-          telefono_clinica = ?,
-          direccion = ?,
-          logo_url = ?,
-          hora_apertura = COALESCE(?, hora_apertura),
-          hora_cierre = COALESCE(?, hora_cierre),
-          duracion_defecto_minutos = COALESCE(?, duracion_defecto_minutos)
-      WHERE id = 1
-    `, [
-      nombre_clinica,
-      eslogan || null,
-      telefono_clinica || null,
-      direccion || null,
-      logo_url || null,
-      hora_apertura,
-      hora_cierre,
-      duracion_defecto_minutos
-    ]);
-
-    res.json({ ok: true, mensaje: 'Configuración actualizada con éxito' });
-  } catch (err) {
-    console.error('Error al guardar configuracion:', err);
-    res.status(500).json({ error: err.message });
-  }
 });
 
 const PORT = process.env.PORT || 3001;
