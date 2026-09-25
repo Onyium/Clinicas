@@ -37,7 +37,20 @@ function calcularHoraFin(horaInicio, duracionMinutos) {
   return String(date.getHours()).padStart(2, '0') + ':' + 
          String(date.getMinutes()).padStart(2, '0') + ':00';
 }
+// ENDPOINT DE LOGIN SÚPER RÁPIDO
+app.post('/api/login', (req, res) => {
+  const { usuario, password } = req.body;
+  
+  // Cámbialos por el usuario y clave que tú y tu tía quieran
+  const USUARIO_CORRECTO = 'admin';
+  const PASSWORD_CORRECTA = 'admin123'; 
 
+  if (usuario === USUARIO_CORRECTO && password === PASSWORD_CORRECTA) {
+    res.json({ ok: true, mensaje: 'Bienvenido' });
+  } else {
+    res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
+  }
+});
 // 1. Obtener configuración de la clínica
 app.get('/api/configuracion', async (req, res) => {
   try {
