@@ -50,7 +50,13 @@ export default function ConfigModal({ isOpen, onClose, onSaved }) {
     try {
       await api.put('/api/configuracion', form);
       alert('✅ Configuración guardada correctamente.');
+      
+      // 1. Notifica al componente padre
       if (onSaved) onSaved(form);
+      
+      // 2. Mantiene los datos en el estado local del modal
+      setForm(prev => ({ ...prev, ...form }));
+      
       onClose();
     } catch (err) {
       console.error(err);
