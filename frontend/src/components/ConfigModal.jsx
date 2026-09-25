@@ -17,6 +17,7 @@ export default function ConfigModal({ isOpen, onClose, onSaved }) {
 
   useEffect(() => {
     if (!isOpen) return;
+
     const cargarConfig = async () => {
       setLoading(true);
       try {
@@ -39,6 +40,7 @@ export default function ConfigModal({ isOpen, onClose, onSaved }) {
         setLoading(false);
       }
     };
+
     cargarConfig();
   }, [isOpen]);
 
