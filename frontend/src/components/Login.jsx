@@ -14,9 +14,12 @@ export default function Login({ onLogin }) {
 
     try {
       const res = await api.post('/api/login', { usuario, password });
-      if (res.data.ok) {
-        onLogin(); // Le avisa a App.jsx que deje pasar al usuario
-      }
+        if (res.data.ok) {
+        localStorage.setItem('clinic_auth', 'true');
+        localStorage.setItem('clinic_user_id', res.data.usuario.id);
+        localStorage.setItem('clinic_user_nombre', res.data.usuario.nombre);
+        onLogin();
+        }
     } catch (err) {
       setError('Credenciales incorrectas. Intente de nuevo.');
     } finally {

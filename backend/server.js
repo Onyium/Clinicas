@@ -37,18 +37,21 @@ function calcularHoraFin(horaInicio, duracionMinutos) {
   return String(date.getHours()).padStart(2, '0') + ':' + 
          String(date.getMinutes()).padStart(2, '0') + ':00';
 }
-// ENDPOINT DE LOGIN SÚPER RÁPIDO
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
   const { usuario, password } = req.body;
-  
-  // Cámbialos por el usuario y clave que tú y tu tía quieran
-  const USUARIO_CORRECTO = 'admin';
-  const PASSWORD_CORRECTA = 'admin123'; 
+  try {
+    const [rows] = await pool.query(
+      'SELECT id, usuario, nombre FROM usuarios WHERE usuario = ? AND password = ?',
+      [usuario, password]
+    );
 
-  if (usuario === USUARIO_CORRECTO && password === PASSWORD_CORRECTA) {
-    res.json({ ok: true, mensaje: 'Bienvenido' });
-  } else {
-    res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
+    if (rows.length > 0) {
+      res.json({ ok: true, usuario: rows[0] });
+    } else {
+      res.status(401).json({ error: 'Credenciales inválidas' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 // 1. Obtener configuración de la clínica
@@ -89,62 +92,34 @@ app.get('/api/test/enviar-recordatorios', async (req, res) => {
   }
 });
 
-// 3. Listar citas
+// GET /api/citas
 app.get('/api/citas', async (req, res) => {
+  const usuarioId = req.headers['x-usuario-id'] || 1;
   try {
-    const [rows] = await pool.query('SELECT * FROM citas ORDER BY fecha_cita, hora_cita ASC');
+    const [rows] = await pool.query(
+      'SELECT * FROM citas WHERE usuario_id = ? ORDER BY fecha_cita ASC, hora_cita ASC',
+      [usuarioId]
+    );
     res.json(rows);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al obtener citas' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
-// 4. Crear nueva cita
+// POST /api/citas
 app.post('/api/citas', async (req, res) => {
-  const { paciente_nombre, paciente_telefono, doctor_nombre, fecha_cita, hora_cita, duracion_minutos, indicaciones } = req.body;
-
-  if (!paciente_nombre || !paciente_telefono || !doctor_nombre || !fecha_cita || !hora_cita) {
-    return res.status(400).json({ error: 'Todos los campos requeridos deben estar completos' });
-  }
-
-  const duracion = duracion_minutos || 30;
-  const hora_fin = calcularHoraFin(hora_cita, duracion);
-
+  const usuarioId = req.headers['x-usuario-id'] || 1;
+  const { paciente_id, paciente_nombre, paciente_telefono, doctor_id, doctor_nombre, fecha_cita, hora_cita, duracion_minutos, indicaciones, estado } = req.body;
+  
   try {
-    let paciente_id = null;
-    const [pacienteExistente] = await pool.query('SELECT id FROM pacientes WHERE telefono = ? LIMIT 1', [paciente_telefono]);
-    
-    if (pacienteExistente.length > 0) {
-      paciente_id = pacienteExistente[0].id;
-    } else {
-      const [nuevoPac] = await pool.query('INSERT INTO pacientes (nombre, telefono) VALUES (?, ?)', [paciente_nombre, paciente_telefono]);
-      paciente_id = nuevoPac.insertId;
-    }
-
     const [result] = await pool.query(
-      `INSERT INTO citas (paciente_id, paciente_nombre, paciente_telefono, doctor_nombre, fecha_cita, hora_cita, duracion_minutos, hora_fin, indicaciones)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [paciente_id, paciente_nombre, paciente_telefono, doctor_nombre, fecha_cita, hora_cita, duracion, hora_fin, indicaciones || null]
+      `INSERT INTO citas (usuario_id, paciente_id, paciente_nombre, paciente_telefono, doctor_id, doctor_nombre, fecha_cita, hora_cita, duracion_minutos, indicaciones, estado)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [usuarioId, paciente_id, paciente_nombre, paciente_telefono, doctor_id, doctor_nombre, fecha_cita, hora_cita, duracion_minutos || 30, indicaciones, estado || 'RESERVADA']
     );
-
-    const nuevaCita = {
-      id: result.insertId,
-      paciente_id,
-      paciente_nombre,
-      paciente_telefono,
-      doctor_nombre,
-      fecha_cita,
-      hora_cita,
-      duracion_minutos: duracion,
-      hora_fin,
-      indicaciones
-    };
-
-    enviarMensajeReserva(nuevaCita);
-    res.status(201).json({ id: result.insertId, message: 'Cita agendada y expediente actualizado' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error al agendar cita' });
+    res.json({ ok: true, id: result.insertId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -304,88 +279,41 @@ app.post('/api/test/enviar-recordatorio-cita/:cita_id', async (req, res) => {
 // ==========================================
 
 // 1. Listar pacientes
+// GET /api/pacientes
 app.get('/api/pacientes', async (req, res) => {
-  const { q } = req.query;
+  const usuarioId = req.headers['x-usuario-id'] || 1;
+  const q = req.query.q || '';
   try {
-    let query = `
-      SELECT p.*, 
-             COUNT(DISTINCT c.id) AS total_citas,
-             COUNT(DISTINCT r.id) AS total_recetas
-      FROM pacientes p
-      LEFT JOIN consultas_medicas c ON c.paciente_id = p.id
-      LEFT JOIN recetas_medicamentos r ON r.paciente_id = p.id
-    `;
-    const params = [];
-
-    if (q) {
-      query += ` WHERE p.nombre LIKE ? OR p.telefono LIKE ? `;
-      params.push(`%${q}%`, `%${q}%`);
-    }
-
-    query += ` GROUP BY p.id ORDER BY p.nombre ASC`;
-
-    const [pacientes] = await pool.query(query, params);
-    res.json(pacientes);
-  } catch (error) {
-    console.error('Error al listar pacientes:', error);
-    res.status(500).json({ error: 'Error al obtener pacientes' });
+    const [rows] = await pool.query(
+      `SELECT * FROM pacientes 
+       WHERE usuario_id = ? AND (nombre LIKE ? OR telefono LIKE ?) 
+       ORDER BY id DESC`,
+      [usuarioId, `%${q}%`, `%${q}%`]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
-// 2. CREAR O ACTUALIZAR PACIENTE
+// POST /api/pacientes (Crear paciente amarrado a este doctor)
 app.post('/api/pacientes', async (req, res) => {
-  // En POST /api/pacientes de tu server.js:
-const {
-  id,
-  nombre,
-  telefono,
-  fecha_nacimiento,
-  sexo,
-  alergias,
-  antecedentes,
-  contacto_emergencia,
-  telefono_emergencia,
-  notas_generales,
-  foto_url // <--- Añadir aquí
-} = req.body;
-
-  if (!nombre || !telefono) {
-    return res.status(400).json({ error: 'Nombre y teléfono son obligatorios' });
-  }
-
+  const usuarioId = req.headers['x-usuario-id'] || 1;
+  const { nombre, telefono, fecha_nacimiento, sexo, alergias, antecedentes } = req.body;
+  
   try {
-    if (id) {
-      await pool.query(
-        `UPDATE pacientes SET 
-           nombre = ?, telefono = ?, fecha_nacimiento = ?, sexo = ?, 
-           alergias = ?, antecedentes = ?, contacto_emergencia = ?, 
-           telefono_emergencia = ?, notas_generales = ?, foto_url = ?
-         WHERE id = ?`,
-        [
-          nombre, telefono, fecha_nacimiento || null, sexo || 'Otro',
-          alergias || 'Ninguna', antecedentes || null, contacto_emergencia || null,
-          telefono_emergencia || null, notas_generales || null, foto_url || null, id
-        ]
-      );
-      return res.json({ ok: true, id, mensaje: 'Paciente actualizado con éxito' });
-    } else {
-      const [result] = await pool.query(
-        `INSERT INTO pacientes 
-         (nombre, telefono, fecha_nacimiento, sexo, alergias, antecedentes, contacto_emergencia, telefono_emergencia, notas_generales, foto_url)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          nombre, telefono, fecha_nacimiento || null, sexo || 'Otro',
-          alergias || 'Ninguna', antecedentes || null, contacto_emergencia || null,
-          telefono_emergencia || null, notas_generales || null, foto_url || null
-        ]
-      );
-      return res.json({ ok: true, id: result.insertId, mensaje: 'Paciente creado con éxito' });
-    }
-  } catch (error) {
-    console.error('Error guardando paciente:', error);
-    res.status(500).json({ error: 'Error al guardar paciente' });
+    const [result] = await pool.query(
+      `INSERT INTO pacientes (usuario_id, nombre, telefono, fecha_nacimiento, sexo, alergias, antecedentes)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [usuarioId, nombre, telefono, fecha_nacimiento || null, sexo || 'Otro', alergias || null, antecedentes || null]
+    );
+    res.json({ ok: true, id: result.insertId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
+
+
 
 // Eliminar un paciente completo y todo su historial clínico
 app.delete('/api/pacientes/:id', async (req, res) => {
