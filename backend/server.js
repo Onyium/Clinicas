@@ -616,6 +616,60 @@ app.get('/api/ping', (req, res) => {
   res.status(200).send('pong');
 });
 
+// 1. Obtener los datos del consultorio (para recetas y encabezados)
+app.get('/api/configuracion', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM configuracion LIMIT 1');
+    res.json(rows[0] || { nombre_clinica: 'Consultorio Médico' });
+  } catch (err) {
+    console.error('Error al obtener configuracion:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 2. Guardar cambios de configuración desde el modal del engranaje ⚙️
+app.put('/api/configuracion', async (req, res) => {
+  const { 
+    nombre_clinica, 
+    eslogan, 
+    telefono_clinica, 
+    direccion, 
+    logo_url, 
+    hora_apertura, 
+    hora_cierre, 
+    duracion_defecto_minutos 
+  } = req.body;
+
+  try {
+    await pool.query(`
+      UPDATE configuracion 
+      SET nombre_clinica = COALESCE(?, nombre_clinica),
+          eslogan = ?,
+          telefono_clinica = ?,
+          direccion = ?,
+          logo_url = ?,
+          hora_apertura = COALESCE(?, hora_apertura),
+          hora_cierre = COALESCE(?, hora_cierre),
+          duracion_defecto_minutos = COALESCE(?, duracion_defecto_minutos)
+      WHERE id = 1
+    `, [
+      nombre_clinica,
+      eslogan || null,
+      telefono_clinica || null,
+      direccion || null,
+      logo_url || null,
+      hora_apertura,
+      hora_cierre,
+      duracion_defecto_minutos
+    ]);
+
+    res.json({ ok: true, mensaje: 'Configuración actualizada con éxito' });
+  } catch (err) {
+    console.error('Error al guardar configuracion:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor backend escuchando en http://localhost:${PORT}`);

@@ -2,126 +2,216 @@ import React, { useState, useEffect } from 'react';
 import api from '../api';
 
 export default function ConfigModal({ isOpen, onClose, onSaved }) {
-  const [config, setConfig] = useState({
+  const [form, setForm] = useState({
     nombre_clinica: '',
+    eslogan: '',
+    telefono_clinica: '',
+    direccion: '',
+    logo_url: '',
     hora_apertura: '08:00',
-    hora_cierre: '13:00',
-    duracion_defecto_minutos: 30,
-    permite_reprogramar_bot: true
+    hora_cierre: '17:00',
+    duracion_defecto_minutos: 30
   });
+  const [loading, setLoading] = useState(false);
+  const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
-      api.get(`/api/configuracion`).then(res => {
+    if (!isOpen) return;
+    const cargarConfig = async () => {
+      setLoading(true);
+      try {
+        const res = await api.get('/api/configuracion');
         if (res.data) {
-          setConfig({
-            ...res.data,
-            hora_apertura: res.data.hora_apertura?.slice(0, 5) || '08:00',
-            hora_cierre: res.data.hora_cierre?.slice(0, 5) || '13:00',
-            permite_reprogramar_bot: Boolean(res.data.permite_reprogramar_bot)
+          setForm({
+            nombre_clinica: res.data.nombre_clinica || '',
+            eslogan: res.data.eslogan || '',
+            telefono_clinica: res.data.telefono_clinica || '',
+            direccion: res.data.direccion || '',
+            logo_url: res.data.logo_url || '',
+            hora_apertura: res.data.hora_apertura ? res.data.hora_apertura.slice(0, 5) : '08:00',
+            hora_cierre: res.data.hora_cierre ? res.data.hora_cierre.slice(0, 5) : '17:00',
+            duracion_defecto_minutos: res.data.duracion_defecto_minutos || 30
           });
         }
-      }).catch(err => console.error('Error cargando configuración:', err));
-    }
+      } catch (err) {
+        console.error('Error cargando configuración:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    cargarConfig();
   }, [isOpen]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setGuardando(true);
     try {
-      await api.put(`/api/configuracion`, config);
-      onSaved(config);
+      await api.put('/api/configuracion', form);
+      alert('✅ Configuración guardada correctamente.');
+      if (onSaved) onSaved(form);
       onClose();
     } catch (err) {
+      console.error(err);
       alert('Error al guardar la configuración');
+    } finally {
+      setGuardando(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
-        <h2 className="text-lg font-bold text-slate-800 mb-4">⚙️ Configuración del Consultorio</h2>
-
-        <form onSubmit={handleSubmit} className="space-y-4 text-sm">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+        
+        {/* Cabecera del modal */}
+        <div className="flex justify-between items-center pb-3 border-b border-slate-100">
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Nombre de la Clínica</label>
-            <input
-              type="text"
-              required
-              value={config.nombre_clinica}
-              onChange={(e) => setConfig({ ...config, nombre_clinica: e.target.value })}
-              className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <h2 className="text-base font-black text-slate-800">⚙️ Configuración del Consultorio</h2>
+            <p className="text-xs text-slate-500">Personaliza tus recetas, membresías y horarios</p>
           </div>
+          <button 
+            onClick={onClose} 
+            className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Hora Apertura</label>
-              <input
-                type="time"
-                required
-                value={config.hora_apertura}
-                onChange={(e) => setConfig({ ...config, hora_apertura: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
-              />
+        {loading ? (
+          <div className="py-12 text-center text-xs text-slate-400">Cargando datos...</div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto pr-1 py-3 flex-1 text-xs">
+            
+            {/* SECCIÓN 1: MEMBRETE Y DATOS DE LA CLÍNICA */}
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+              <span className="font-black text-slate-700 uppercase tracking-wider block text-[11px]">
+                🏥 Membrete Institucional (Aparece en Recetas y PDF)
+              </span>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Nombre del Consultorio / Clínica *</label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="Ej. Consultorio Médico Maye"
+                  value={form.nombre_clinica}
+                  onChange={(e) => setForm({ ...form, nombre_clinica: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Eslogan o Subtítulo (Opcional)</label>
+                <input 
+                  type="text" 
+                  placeholder="Ej. Cuidado y salud para toda la familia"
+                  value={form.eslogan}
+                  onChange={(e) => setForm({ ...form, eslogan: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Teléfono de Contacto</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ej. 6452-6988"
+                    value={form.telefono_clinica}
+                    onChange={(e) => setForm({ ...form, telefono_clinica: e.target.value })}
+                    className="w-full bg-white border border-slate-300 rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Dirección del Consultorio</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ej. Barrio El Centro, Sonsonate"
+                    value={form.direccion}
+                    onChange={(e) => setForm({ ...form, direccion: e.target.value })}
+                    className="w-full bg-white border border-slate-300 rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">URL del Logo (Opcional)</label>
+                <input 
+                  type="url" 
+                  placeholder="https://ejemplo.com/logo-clinica.png"
+                  value={form.logo_url}
+                  onChange={(e) => setForm({ ...form, logo_url: e.target.value })}
+                  className="w-full bg-white border border-slate-300 rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                />
+                <span className="text-[10px] text-slate-400 mt-0.5 block">
+                  Pega un enlace de imagen pública o déjalo vacío si no usarás logo.
+                </span>
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Hora Cierre</label>
-              <input
-                type="time"
-                required
-                value={config.hora_cierre}
-                onChange={(e) => setConfig({ ...config, hora_cierre: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
-              />
+
+            {/* SECCIÓN 2: HORARIOS DE LA AGENDA */}
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+              <span className="font-black text-slate-700 uppercase tracking-wider block text-[11px]">
+                📅 Horarios de Atención (Agenda y Citas)
+              </span>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Hora de Apertura</label>
+                  <input 
+                    type="time" 
+                    value={form.hora_apertura}
+                    onChange={(e) => setForm({ ...form, hora_apertura: e.target.value })}
+                    className="w-full bg-white border border-slate-300 rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Hora de Cierre</label>
+                  <input 
+                    type="time" 
+                    value={form.hora_cierre}
+                    onChange={(e) => setForm({ ...form, hora_cierre: e.target.value })}
+                    className="w-full bg-white border border-slate-300 rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Duración por Turno / Cita (Minutos)</label>
+                <input 
+                  type="number" 
+                  min="10"
+                  max="120"
+                  step="5"
+                  value={form.duracion_defecto_minutos}
+                  onChange={(e) => setForm({ ...form, duracion_defecto_minutos: parseInt(e.target.value, 10) || 30 })}
+                  className="w-full bg-white border border-slate-300 rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                />
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Duración Predeterminada por Cita</label>
-            <select
-              value={config.duracion_defecto_minutos}
-              onChange={(e) => setConfig({ ...config, duracion_defecto_minutos: Number(e.target.value) })}
-              className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-            >
-              <option value={15}>15 minutos</option>
-              <option value={20}>20 minutos</option>
-              <option value={30}>30 minutos (Estándar)</option>
-              <option value={45}>45 minutos</option>
-              <option value={60}>60 minutos (1 hora)</option>
-            </select>
-          </div>
+            {/* Botones de acción */}
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <button 
+                type="button" 
+                onClick={onClose}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="submit" 
+                disabled={guardando}
+                className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition shadow-xs disabled:opacity-50 cursor-pointer"
+              >
+                {guardando ? 'Guardando...' : '💾 Guardar Cambios'}
+              </button>
+            </div>
 
-          <div className="flex items-center gap-2 pt-2">
-            <input
-              type="checkbox"
-              id="reprogramar"
-              checked={config.permite_reprogramar_bot}
-              onChange={(e) => setConfig({ ...config, permite_reprogramar_bot: e.target.checked })}
-              className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
-            />
-            <label htmlFor="reprogramar" className="text-xs text-slate-700 font-medium">
-              Permitir que el bot ofrezca 4 slots y reprograme automáticamente por WhatsApp
-            </label>
-          </div>
+          </form>
+        )}
 
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border rounded-lg text-xs text-slate-600 hover:bg-slate-50 cursor-pointer"
-            >
-              Cerrar
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 cursor-pointer"
-            >
-              Guardar Configuración
-            </button>
-          </div>
-        </form>
       </div>
     </div>
   );
