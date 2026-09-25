@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import api from '../api';
+import React from 'react';
 
 export default function RecetaTab({
   modoCrear,
@@ -12,322 +11,209 @@ export default function RecetaTab({
   eliminarMedicamento,
   recetasDeConsulta = []
 }) {
-  const [configClinica, setConfigClinica] = useState({});
-
-  useEffect(() => {
-    const cargarConfig = async () => {
-      try {
-        const res = await api.get('/api/configuracion');
-        if (res.data) setConfigClinica(res.data);
-      } catch (e) {
-        console.error('Error cargando datos de clínica:', e);
-      }
-    };
-    cargarConfig();
-  }, []);
-
-  const resolverNombreDoctor = (nombreGuardado) => {
-    const nombresGenericos = ['dr consulta', 'dra. consulta', 'dr. consulta', 'médico tratante', 'dra. liseyda'];
-    const limpio = (nombreGuardado || '').trim().toLowerCase();
-
-    // Si viene vacío o con el valor por defecto que tenía el código
-    if (!limpio || nombresGenericos.includes(limpio)) {
-      return localStorage.getItem('clinic_user_nombre') || configClinica.nombre_doctor || 'Dra. Liseyda Maye';
-    }
-    return nombreGuardado;
-  };
-
   const imprimirReceta = () => {
-    if (!consultaSeleccionada || recetasDeConsulta.length === 0) {
-      alert('No hay medicamentos en esta receta para imprimir.');
-      return;
-    }
-
-    const c = consultaSeleccionada || {};
-    const clinicaNombre = configClinica.nombre_clinica || 'CLINIC 365';
-    const eslogan = configClinica.eslogan ? `<p class="slogan">${configClinica.eslogan}</p>` : '';
-    const direccion = configClinica.direccion ? `<p class="meta-clinica">📍 ${configClinica.direccion}</p>` : '';
-    const telefonoClinica = configClinica.telefono_clinica ? `<p class="meta-clinica">📞 ${configClinica.telefono_clinica}</p>` : '';
-    const logoHtml = configClinica.logo_url 
-      ? `<img src="${configClinica.logo_url}" alt="Logo" class="logo-img" />` 
-      : '';
-
-    const doctorTitular = resolverNombreDoctor(c.doctor_nombre);
-
-    const signosItems = [];
-    if (c.peso) signosItems.push(`<span><strong>Peso:</strong> ${c.peso}</span>`);
-    if (c.talla) signosItems.push(`<span><strong>Talla:</strong> ${c.talla}</span>`);
-    if (c.temperatura) signosItems.push(`<span><strong>Temp:</strong> ${c.temperatura}</span>`);
-    if (c.presion_arterial) signosItems.push(`<span><strong>P.A.:</strong> ${c.presion_arterial}</span>`);
-
-    const signosHtml = signosItems.length > 0 
-      ? `<div class="signos-box">${signosItems.join(' &nbsp;|&nbsp; ')}</div>` 
-      : '';
-
-    const fechaStr = c.fecha_formateada || (c.fecha ? String(c.fecha).slice(0, 10) : new Date().toISOString().slice(0, 10));
-
-    const ventana = window.open('', '_blank');
-    ventana.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8" />
-          <title>Receta Médica - ${paciente.nombre || 'Paciente'}</title>
-          <style>
-            @page { 
-              size: auto; 
-              margin: 10mm 15mm; 
-            }
-            body {
-              font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-              color: #1e293b;
-              margin: 0;
-              padding: 0;
-              font-size: 13px;
-              line-height: 1.5;
-            }
-            .header {
-              display: flex;
-              align-items: center;
-              justify-content: space-between;
-              border-bottom: 2px solid #0f766e;
-              padding-bottom: 10px;
-              margin-bottom: 14px;
-            }
-            .logo-box { max-width: 110px; max-height: 80px; }
-            .logo-img { max-width: 100px; max-height: 70px; object-fit: contain; }
-            .clinica-info { text-align: right; }
-            .clinica-title {
-              font-size: 19px;
-              font-weight: 800;
-              color: #0f766e;
-              margin: 0;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-            }
-            .slogan { font-size: 11px; font-style: italic; color: #64748b; margin: 2px 0 0 0; }
-            .meta-clinica { font-size: 10px; color: #475569; margin: 2px 0 0 0; }
-            .doc-title {
-              text-align: center;
-              font-size: 12px;
-              font-weight: 700;
-              letter-spacing: 2px;
-              color: #334155;
-              background-color: #f1f5f9;
-              padding: 5px;
-              border-radius: 6px;
-              margin-bottom: 12px;
-              text-transform: uppercase;
-            }
-            .paciente-box {
-              background-color: #f8fafc;
-              border: 1px solid #e2e8f0;
-              border-radius: 8px;
-              padding: 10px 14px;
-              margin-bottom: 14px;
-              display: grid;
-              grid-template-columns: 2fr 1fr;
-              gap: 6px 16px;
-              font-size: 12px;
-            }
-            .paciente-box div strong { color: #0f766e; }
-            .signos-box {
-              grid-column: span 2;
-              background: #ffffff;
-              border: 1px dashed #cbd5e1;
-              border-radius: 6px;
-              padding: 4px 10px;
-              margin-top: 4px;
-              font-size: 11px;
-              color: #334155;
-            }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th {
-              background-color: #f1f5f9;
-              color: #0f766e;
-              text-align: left;
-              padding: 8px 10px;
-              font-size: 11px;
-              text-transform: uppercase;
-              border-bottom: 1px solid #cbd5e1;
-            }
-            td {
-              padding: 9px 10px;
-              border-bottom: 1px solid #f1f5f9;
-              vertical-align: top;
-              font-size: 12px;
-            }
-            .med-name { font-weight: 700; color: #0f172a; font-size: 13px; }
-            .med-indicacion { color: #64748b; font-size: 11px; margin-top: 2px; }
-            .footer-sign {
-              margin-top: 50px;
-              text-align: center;
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-            }
-            .sign-line { width: 220px; border-top: 1px solid #475569; margin-bottom: 6px; }
-            .sign-doctor { font-weight: 700; font-size: 12px; color: #1e293b; }
-            .sign-sub { font-size: 11px; color: #64748b; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div class="logo-box">${logoHtml}</div>
-            <div class="clinica-info">
-              <h1 class="clinica-title">${clinicaNombre}</h1>
-              ${eslogan}
-              ${direccion}
-              ${telefonoClinica}
-            </div>
-          </div>
-
-          <div class="doc-title">Receta Médica / Prescripción</div>
-
-          <div class="paciente-box">
-            <div><strong>Paciente:</strong> ${paciente.nombre || 'Particular'}</div>
-            <div><strong>Fecha:</strong> ${fechaStr}</div>
-            <div><strong>Folio:</strong> #${String(paciente.id || 0).padStart(4, '0')}</div>
-            <div><strong>Médico Tratante:</strong> ${doctorTitular}</div>
-            ${c.diagnostico ? `<div style="grid-column: span 2;"><strong>Diagnóstico:</strong> ${c.diagnostico}</div>` : ''}
-            ${signosHtml}
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th style="width: 45%;">Medicamento & Indicación</th>
-                <th style="width: 35%;">Frecuencia / Dosis</th>
-                <th style="width: 20%; text-align: center;">Tratamiento</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${recetasDeConsulta.map(r => `
-                <tr>
-                  <td>
-                    <div class="med-name">${r.medicamento}</div>${r.indicacion ? `<div class="med-indicacion">${r.indicacion}</div>` : ''}
-                  </td>
-                  <td>${r.dosis_indicacion || 'Según indicación médica'}</td>
-                  <td style="text-align: center;">${r.dias_tratamiento ? `${r.dias_tratamiento} días` : '-'}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-
-          <div class="footer-sign">
-            <div class="sign-line"></div>
-            <div class="sign-doctor">${doctorTitular}</div>
-            <div class="sign-sub">Médico Responsable</div>
-          </div>
-        </body>
-      </html>
-    `);
-    ventana.document.close();
-    ventana.focus();
-    setTimeout(() => ventana.print(), 500);
+    window.print();
   };
 
-  if (modoCrear || modoEditar) {
-    return (
-      <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
-        <div className="flex justify-between items-center">
-          <div>
-            <h4 className="text-xs font-bold text-slate-800 uppercase flex items-center gap-1.5">
-              💊 Receta Médica & Prescripción
-            </h4>
-            <p className="text-[11px] text-slate-500">Agregue los fármacos indicados</p>
-          </div>
-          <button
-            type="button"
-            onClick={agregarMedicamento}
-            className="text-xs font-bold text-blue-600 bg-white border border-blue-200 px-3 py-1 rounded-lg hover:bg-blue-50 transition cursor-pointer"
-          >
-            + Agregar Fármaco
-          </button>
-        </div>
+  // Cálculo de edad para la receta
+  const calcularEdad = (fechaNac) => {
+    if (!fechaNac) return paciente?.edad ? `${paciente.edad} años` : '---';
+    const hoy = new Date();
+    const nac = new Date(fechaNac);
+    let edad = hoy.getFullYear() - nac.getFullYear();
+    const m = hoy.getMonth() - nac.getMonth();
+    if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) edad--;
+    return edad >= 0 ? `${edad} años` : '---';
+  };
 
-        <div className="space-y-2">
-          {medicamentos.map((item, idx) => (
-            <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-2 bg-white p-2.5 rounded-xl border border-slate-200 items-center">
-              <input 
-                type="text" 
-                placeholder="Medicamento (ej. Amoxicilina 500mg)" 
-                value={item.medicamento} 
-                onChange={(e) => actualizarMedicamento(idx, 'medicamento', e.target.value)} 
-                className="md:col-span-4 border rounded-lg p-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500" 
-              />
-              <input 
-                type="text" 
-                placeholder="Frecuencia (Cada 8 hrs)" 
-                value={item.frecuencia} 
-                onChange={(e) => actualizarMedicamento(idx, 'frecuencia', e.target.value)} 
-                className="md:col-span-3 border rounded-lg p-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500" 
-              />
-              <input 
-                type="number" 
-                placeholder="Días (5)" 
-                value={item.dias_tratamiento} 
-                onChange={(e) => actualizarMedicamento(idx, 'dias_tratamiento', e.target.value)} 
-                className="md:col-span-2 border rounded-lg p-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500" 
-              />
-              <input 
-                type="text" 
-                placeholder="Indicaciones especiales" 
-                value={item.indicacion} 
-                onChange={(e) => actualizarMedicamento(idx, 'indicacion', e.target.value)} 
-                className="md:col-span-2 border rounded-lg p-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500" 
-              />
-              <div className="md:col-span-1 text-center">
-                {medicamentos.length > 1 && (
-                  <button 
-                    type="button" 
-                    onClick={() => eliminarMedicamento(idx)} 
-                    className="text-rose-500 hover:text-rose-700 text-xs font-bold cursor-pointer"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const lista = (modoCrear || modoEditar) ? medicamentos : recetasDeConsulta;
 
   return (
-    <div className="border border-slate-200 rounded-2xl p-5 bg-white shadow-2xs space-y-4">
-      <div className="flex justify-between items-center mb-2">
-        <h4 className="text-xs font-bold text-slate-700 uppercase">
-          Medicamentos Recetados ({recetasDeConsulta.length})
-        </h4>
+    <div className="space-y-6">
+      {/* Botón de impresión */}
+      <div className="flex justify-between items-center no-print">
+        <span className="text-xs text-slate-500 font-semibold">
+          Vista previa y emisión de receta médica
+        </span>
         <button
+          type="button"
           onClick={imprimirReceta}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+          className="bg-[#1b4e7b] hover:bg-blue-800 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-xs transition flex items-center gap-2 cursor-pointer"
         >
-          🖨️ Imprimir Receta con Membrete
+          🖨️ Imprimir Receta
         </button>
       </div>
 
-      {recetasDeConsulta.length === 0 ? (
-        <p className="text-xs text-slate-400 italic bg-slate-50 p-3 rounded-xl border">
-          No se emitieron medicamentos en esta atención.
-        </p>
-      ) : (
-        <div className="space-y-2">
-          {recetasDeConsulta.map((t) => (
-            <div key={t.id} className="p-3 bg-white border border-slate-200 rounded-xl flex justify-between items-center text-xs shadow-2xs">
-              <div>
-                <span className="font-bold text-slate-800 text-sm">{t.medicamento}</span>
-                <span className="text-slate-500 block text-[11px] mt-0.5">{t.dosis_indicacion}</span>
+      {/* Editor interactivo cuando está en modo crear/editar */}
+      {(modoCrear || modoEditar) && (
+        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3 no-print">
+          <div className="flex justify-between items-center">
+            <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider">
+              Medicamentos a prescribir
+            </h4>
+            <button
+              type="button"
+              onClick={agregarMedicamento}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition cursor-pointer"
+            >
+              ➕ Añadir Fármaco
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {medicamentos.map((m, idx) => (
+              <div key={idx} className="grid grid-cols-12 gap-2 bg-white p-2.5 rounded-xl border border-slate-200 items-center">
+                <div className="col-span-5">
+                  <label className="text-[10px] font-bold text-slate-400 block mb-0.5">Medicamento / Presentación</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Paracetamol 500mg tab"
+                    value={m.medicamento}
+                    onChange={(e) => actualizarMedicamento(idx, 'medicamento', e.target.value)}
+                    className="w-full text-xs border border-slate-300 rounded-lg p-1.5 font-medium outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div className="col-span-3">
+                  <label className="text-[10px] font-bold text-slate-400 block mb-0.5">Frecuencia / Posología</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Cada 8 horas"
+                    value={m.frecuencia}
+                    onChange={(e) => actualizarMedicamento(idx, 'frecuencia', e.target.value)}
+                    className="w-full text-xs border border-slate-300 rounded-lg p-1.5 outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div className="col-span-3">
+                  <label className="text-[10px] font-bold text-slate-400 block mb-0.5">Duración (Días)</label>
+                  <input
+                    type="number"
+                    placeholder="Ej. 5"
+                    value={m.dias_tratamiento}
+                    onChange={(e) => actualizarMedicamento(idx, 'dias_tratamiento', e.target.value)}
+                    className="w-full text-xs border border-slate-300 rounded-lg p-1.5 outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div className="col-span-1 flex justify-center pt-3">
+                  <button
+                    type="button"
+                    onClick={() => eliminarMedicamento(idx)}
+                    className="text-rose-500 hover:text-rose-700 text-base font-bold cursor-pointer"
+                    title="Eliminar medicamento"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
-              <span className="font-mono text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg text-xs">
-                {t.dias_tratamiento} días
-              </span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
+
+      {/* PLANTILLA DE LA RECETA TAL CUAL LA IMAGEN */}
+      <div className="receta-medica-print bg-white p-8 rounded-2xl border border-slate-300 shadow-sm max-w-2xl mx-auto font-sans text-slate-800">
+        
+        {/* ENCABEZADO MÉDICO */}
+        <div className="text-center border-b-2 border-slate-700 pb-3 mb-4">
+          <h2 className="text-xl font-black text-[#1b4e7b] tracking-wide uppercase">
+            {consultaSeleccionada.doctor_nombre || 'DRA. LISEYDA MAYE'}
+          </h2>
+          <p className="text-xs font-bold text-slate-600 tracking-wider uppercase">
+            Médico Internista
+          </p>
+          <p className="text-[11px] text-slate-500 font-mono mt-0.5">
+            Exeq: 504-20 • Centro Médico Especializado
+          </p>
+        </div>
+
+        {/* CINTILLO DEL PACIENTE CON EDAD Y TEMPERATURA */}
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs mb-5">
+          <div className="flex justify-between items-center mb-1.5">
+            <div>
+              <span className="font-bold text-slate-500">PACIENTE: </span>
+              <span className="font-bold text-slate-900 uppercase">{paciente?.nombre || 'Nombre no registrado'}</span>
+            </div>
+            <div>
+              <span className="font-bold text-slate-500">FECHA: </span>
+              <span className="font-mono font-bold text-slate-900">
+                {consultaSeleccionada?.fecha_formateada?.slice(0, 10) || new Date().toISOString().slice(0, 10)}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-x-6 gap-y-1 text-[11px] border-t border-slate-200 pt-1.5 mt-1.5">
+            <div>
+              <span className="font-bold text-slate-500">EDAD: </span>
+              <span className="font-bold text-slate-800">{calcularEdad(paciente?.fecha_nacimiento)}</span>
+            </div>
+            {paciente?.responsable_nombre && (
+              <div>
+                <span className="font-bold text-slate-500">TUTOR/RESPONSABLE: </span>
+                <span className="font-semibold text-slate-800">{paciente.responsable_nombre} ({paciente.responsable_parentesco || 'Tutor'})</span>
+              </div>
+            )}
+            <div>
+              <span className="font-bold text-slate-500">TEMP: </span>
+              <span className="font-bold text-rose-600">{consultaSeleccionada?.temperatura || '---'}</span>
+            </div>
+            <div>
+              <span className="font-bold text-slate-500">P.A: </span>
+              <span className="font-semibold text-slate-800">{consultaSeleccionada?.presion_arterial || '---'}</span>
+            </div>
+            <div>
+              <span className="font-bold text-slate-500">PESO: </span>
+              <span className="font-semibold text-slate-800">{consultaSeleccionada?.peso || '---'}</span>
+            </div>
+            <div>
+              <span className="font-bold text-slate-500">TALLA: </span>
+              <span className="font-semibold text-slate-800">{consultaSeleccionada?.talla || '---'}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* SIMBOLO RP / RX */}
+        <div className="mb-4">
+          <span className="text-2xl font-serif font-black italic text-blue-900">Rp.</span>
+        </div>
+
+        {/* LISTADO DE MEDICAMENTOS */}
+        <div className="space-y-4 min-h-[220px] px-2">
+          {lista.length === 0 ? (
+            <p className="text-xs text-slate-400 italic">No se han registrado medicamentos en esta consulta.</p>
+          ) : (
+            lista.map((med, i) => (
+              <div key={i} className="border-b border-dashed border-slate-200 pb-2.5">
+                <div className="flex justify-between items-baseline">
+                  <span className="font-bold text-xs text-slate-900">
+                    {i + 1}. {med.medicamento || med.nombre}
+                  </span>
+                  {med.dias_tratamiento && (
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      Por: {med.dias_tratamiento} días
+                    </span>
+                  )}
+                </div>
+                <div className="text-[11px] text-slate-600 italic pl-4 mt-0.5">
+                  Tomar / Aplicar: {med.frecuencia || med.dosis_indicacion || 'Según indicación médica'}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* PIE DE RECETA: FIRMA Y SELLO */}
+        <div className="mt-14 pt-6 border-t border-slate-200 flex justify-between items-end">
+          <div className="text-[10px] text-slate-400">
+            * Conserve esta receta durante su tratamiento.<br/>
+            * En caso de reacción adversa suspenda y consulte a su médico.
+          </div>
+          <div className="text-center w-48">
+            <div className="border-b border-slate-800 mb-1 w-full"></div>
+            <p className="text-[11px] font-bold text-slate-800">Firma / Sello Médico</p>
+            <p className="text-[9px] text-slate-500 uppercase">{consultaSeleccionada.doctor_nombre || 'Dra. Liseyda Maye'}</p>
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 }
