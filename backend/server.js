@@ -54,13 +54,14 @@ app.post('/api/login', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-// 1. Obtener configuración de la clínica
+
 app.get('/api/configuracion', async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM configuracion_clinica LIMIT 1');
+    const [rows] = await pool.query('SELECT * FROM configuracion WHERE id = 1');
     res.json(rows[0] || {});
-  } catch (error) {
-    res.status(500).json({ error: 'Error al obtener configuración' });
+  } catch (err) {
+    console.error('Error al obtener configuracion:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
