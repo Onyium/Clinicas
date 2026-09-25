@@ -211,15 +211,19 @@ export default function LaboratorioTab({
     setTimeout(() => ventanaImpresion.print(), 500);
   };
 
-  if (modoCrear) {
+  // VISTA ACTIVA AL CREAR O EDITAR LA CONSULTA
+  if (modoCrear || modoEditar) {
     return (
       <div className="p-4 bg-blue-50/50 border border-blue-200 rounded-2xl space-y-3">
         <div className="flex justify-between items-center">
-          <h4 className="text-xs font-bold text-blue-900 uppercase">🧪 Solicitud de Exámenes</h4>
+          <div>
+            <h4 className="text-xs font-bold text-blue-900 uppercase">🧪 Solicitud de Exámenes Clínicos</h4>
+            <p className="text-[11px] text-slate-500">Agregue los análisis o estudios requeridos para el paciente</p>
+          </div>
           <button 
             type="button" 
             onClick={agregarEstudioNuevo} 
-            className="text-xs font-bold text-blue-600 bg-white border border-blue-200 px-3 py-1 rounded-lg hover:bg-blue-50 cursor-pointer"
+            className="text-xs font-bold text-blue-600 bg-white border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition cursor-pointer"
           >
             + Agregar Examen
           </button>
@@ -227,12 +231,36 @@ export default function LaboratorioTab({
         <div className="space-y-2">
           {estudiosNuevos.map((est, idx) => (
             <div key={idx} className="grid grid-cols-1 md:grid-cols-11 gap-2 bg-white p-2.5 rounded-xl border border-blue-100 items-center">
-              <input type="text" placeholder="Tipo de Estudio (ej. Hemograma)" value={est.tipo_estudio} onChange={(e) => actualizarEstudioNuevo(idx, 'tipo_estudio', e.target.value)} className="md:col-span-4 border rounded-lg p-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500" />
-              <input type="text" placeholder="Laboratorio (opcional)" value={est.laboratorio} onChange={(e) => actualizarEstudioNuevo(idx, 'laboratorio', e.target.value)} className="md:col-span-3 border rounded-lg p-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500" />
-              <input type="text" placeholder="Observaciones / Ayuno" value={est.observaciones} onChange={(e) => actualizarEstudioNuevo(idx, 'observaciones', e.target.value)} className="md:col-span-3 border rounded-lg p-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500" />
+              <input 
+                type="text" 
+                placeholder="Tipo de Estudio (ej. Hemograma completo)" 
+                value={est.tipo_estudio} 
+                onChange={(e) => actualizarEstudioNuevo(idx, 'tipo_estudio', e.target.value)} 
+                className="md:col-span-4 border border-slate-300 rounded-lg p-2 text-xs outline-none focus:ring-1 focus:ring-blue-500" 
+              />
+              <input 
+                type="text" 
+                placeholder="Laboratorio sugerido (opcional)" 
+                value={est.laboratorio} 
+                onChange={(e) => actualizarEstudioNuevo(idx, 'laboratorio', e.target.value)} 
+                className="md:col-span-3 border border-slate-300 rounded-lg p-2 text-xs outline-none focus:ring-1 focus:ring-blue-500" 
+              />
+              <input 
+                type="text" 
+                placeholder="Indicaciones / Preparación" 
+                value={est.observaciones} 
+                onChange={(e) => actualizarEstudioNuevo(idx, 'observaciones', e.target.value)} 
+                className="md:col-span-3 border border-slate-300 rounded-lg p-2 text-xs outline-none focus:ring-1 focus:ring-blue-500" 
+              />
               <div className="md:col-span-1 text-center">
                 {estudiosNuevos.length > 1 && (
-                  <button type="button" onClick={() => eliminarEstudioNuevo(idx)} className="text-rose-500 font-bold hover:text-rose-700 cursor-pointer">✕</button>
+                  <button 
+                    type="button" 
+                    onClick={() => eliminarEstudioNuevo(idx)} 
+                    className="text-rose-500 hover:text-rose-700 font-bold p-1 text-xs cursor-pointer"
+                  >
+                    ✕
+                  </button>
                 )}
               </div>
             </div>
@@ -242,14 +270,7 @@ export default function LaboratorioTab({
     );
   }
 
-  if (modoEditar) {
-    return (
-      <p className="text-xs text-slate-500 p-4 border rounded-xl bg-white">
-        Los estudios se gestionan directamente desde la vista detallada de la consulta una vez guardada.
-      </p>
-    );
-  }
-
+  // VISTA DE LECTURA E IMPRESIÓN DIRECTA
   return (
     <div className="border border-slate-200 rounded-2xl p-5 bg-white shadow-2xs space-y-4">
       <div className="flex justify-between items-center mb-2">
