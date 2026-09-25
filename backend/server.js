@@ -66,17 +66,49 @@ app.get('/api/configuracion', async (req, res) => {
 
 // 2. Guardar configuración de la clínica
 app.put('/api/configuracion', async (req, res) => {
-  const { duracion_defecto_minutos, hora_apertura, hora_cierre, permite_reprogramar_bot } = req.body;
+  const { 
+    nombre_clinica, 
+    eslogan, 
+    telefono_clinica, 
+    direccion, 
+    logo_url, 
+    hora_apertura, 
+    hora_cierre, 
+    duracion_defecto_minutos 
+  } = req.body;
+
   try {
-    await pool.query(
-      `UPDATE configuracion_clinica 
-       SET duracion_defecto_minutos = ?, hora_apertura = ?, hora_cierre = ?, permite_reprogramar_bot = ?
-       WHERE id = 1`,
-      [duracion_defecto_minutos, hora_apertura, hora_cierre, permite_reprogramar_bot]
-    );
-    res.json({ message: 'Configuración actualizada con éxito' });
-  } catch (error) {
-    res.status(500).json({ error: 'Error al guardar configuración' });
+    await pool.query(`
+      INSERT INTO configuracion (
+        id, nombre_clinica, eslogan, telefono_clinica, direccion, logo_url, 
+        hora_apertura, hora_cierre, duracion_defecto_minutos
+      ) VALUES (
+        1, ?, ?, ?, ?, ?, ?, ?, ?
+      )
+      ON DUPLICATE KEY UPDATE
+        nombre_clinica = VALUES(nombre_clinica),
+        eslogan = VALUES(eslogan),
+        telefono_clinica = VALUES(telefono_clinica),
+        direccion = VALUES(direccion),
+        logo_url = VALUES(logo_url),
+        hora_apertura = VALUES(hora_apertura),
+        hora_cierre = VALUES(hora_cierre),
+        duracion_defecto_minutos = VALUES(duracion_defecto_minutos)
+    `, [
+      nombre_clinica || 'Consultorio Médico',
+      eslogan || null,
+      telefono_clinica || null,
+      direccion || null,
+      logo_url || null,
+      hora_apertura ? (hora_apertura.length === 5 ? `${hora_apertura}:00` : hora_apertura) : '08:00:00',
+      hora_cierre ? (hora_cierre.length === 5 ? `${hora_cierre}:00` : hora_cierre) : '17:00:00',
+      parseInt(duracion_defecto_minutos, 10) || 30
+    ]);
+
+    res.json({ ok: true, mensaje: 'Configuración guardada exitosamente' });
+  } catch (err) {
+    console.error('Error detallado en configuracion:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
