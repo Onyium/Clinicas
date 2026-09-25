@@ -26,6 +26,17 @@ export default function RecetaTab({
     cargarConfig();
   }, []);
 
+  const resolverNombreDoctor = (nombreGuardado) => {
+    const nombresGenericos = ['dr consulta', 'dra. consulta', 'dr. consulta', 'médico tratante', 'dra. liseyda'];
+    const limpio = (nombreGuardado || '').trim().toLowerCase();
+
+    // Si viene vacío o con el valor por defecto que tenía el código
+    if (!limpio || nombresGenericos.includes(limpio)) {
+      return localStorage.getItem('clinic_user_nombre') || configClinica.nombre_doctor || 'Dra. Liseyda Maye';
+    }
+    return nombreGuardado;
+  };
+
   const imprimirReceta = () => {
     if (!consultaSeleccionada || recetasDeConsulta.length === 0) {
       alert('No hay medicamentos en esta receta para imprimir.');
@@ -41,7 +52,8 @@ export default function RecetaTab({
       ? `<img src="${configClinica.logo_url}" alt="Logo" class="logo-img" />` 
       : '';
 
-    // Renderizado condicional de signos vitales (omite vacíos)
+    const doctorTitular = resolverNombreDoctor(c.doctor_nombre);
+
     const signosItems = [];
     if (c.peso) signosItems.push(`<span><strong>Peso:</strong> ${c.peso}</span>`);
     if (c.talla) signosItems.push(`<span><strong>Talla:</strong> ${c.talla}</span>`);
@@ -62,12 +74,15 @@ export default function RecetaTab({
           <meta charset="utf-8" />
           <title>Receta Médica - ${paciente.nombre || 'Paciente'}</title>
           <style>
-            @page { size: auto; margin: 15mm; }
+            @page { 
+              size: auto; 
+              margin: 10mm 15mm; 
+            }
             body {
               font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
               color: #1e293b;
               margin: 0;
-              padding: 10px;
+              padding: 0;
               font-size: 13px;
               line-height: 1.5;
             }
@@ -76,50 +91,32 @@ export default function RecetaTab({
               align-items: center;
               justify-content: space-between;
               border-bottom: 2px solid #0f766e;
-              padding-bottom: 12px;
-              margin-bottom: 16px;
+              padding-bottom: 10px;
+              margin-bottom: 14px;
             }
-            .logo-box {
-              max-width: 110px;
-              max-height: 80px;
-            }
-            .logo-img {
-              max-width: 100px;
-              max-height: 70px;
-              object-fit: contain;
-            }
-            .clinica-info {
-              text-align: right;
-            }
+            .logo-box { max-width: 110px; max-height: 80px; }
+            .logo-img { max-width: 100px; max-height: 70px; object-fit: contain; }
+            .clinica-info { text-align: right; }
             .clinica-title {
-              font-size: 20px;
+              font-size: 19px;
               font-weight: 800;
               color: #0f766e;
               margin: 0;
               text-transform: uppercase;
               letter-spacing: 0.5px;
             }
-            .slogan {
-              font-size: 11px;
-              font-style: italic;
-              color: #64748b;
-              margin: 2px 0 0 0;
-            }
-            .meta-clinica {
-              font-size: 10px;
-              color: #475569;
-              margin: 2px 0 0 0;
-            }
+            .slogan { font-size: 11px; font-style: italic; color: #64748b; margin: 2px 0 0 0; }
+            .meta-clinica { font-size: 10px; color: #475569; margin: 2px 0 0 0; }
             .doc-title {
               text-align: center;
-              font-size: 13px;
+              font-size: 12px;
               font-weight: 700;
               letter-spacing: 2px;
               color: #334155;
               background-color: #f1f5f9;
-              padding: 4px;
+              padding: 5px;
               border-radius: 6px;
-              margin-bottom: 15px;
+              margin-bottom: 12px;
               text-transform: uppercase;
             }
             .paciente-box {
@@ -127,15 +124,13 @@ export default function RecetaTab({
               border: 1px solid #e2e8f0;
               border-radius: 8px;
               padding: 10px 14px;
-              margin-bottom: 15px;
+              margin-bottom: 14px;
               display: grid;
               grid-template-columns: 2fr 1fr;
               gap: 6px 16px;
               font-size: 12px;
             }
-            .paciente-box div strong {
-              color: #0f766e;
-            }
+            .paciente-box div strong { color: #0f766e; }
             .signos-box {
               grid-column: span 2;
               background: #ffffff;
@@ -146,11 +141,7 @@ export default function RecetaTab({
               font-size: 11px;
               color: #334155;
             }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-top: 10px;
-            }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
             th {
               background-color: #f1f5f9;
               color: #0f766e;
@@ -161,49 +152,28 @@ export default function RecetaTab({
               border-bottom: 1px solid #cbd5e1;
             }
             td {
-              padding: 10px;
+              padding: 9px 10px;
               border-bottom: 1px solid #f1f5f9;
               vertical-align: top;
               font-size: 12px;
             }
-            .med-name {
-              font-weight: 700;
-              color: #0f172a;
-              font-size: 13px;
-            }
-            .med-indicacion {
-              color: #64748b;
-              font-size: 11px;
-              margin-top: 2px;
-            }
+            .med-name { font-weight: 700; color: #0f172a; font-size: 13px; }
+            .med-indicacion { color: #64748b; font-size: 11px; margin-top: 2px; }
             .footer-sign {
-              margin-top: 60px;
+              margin-top: 50px;
               text-align: center;
               display: flex;
               flex-direction: column;
               align-items: center;
             }
-            .sign-line {
-              width: 220px;
-              border-top: 1px solid #475569;
-              margin-bottom: 6px;
-            }
-            .sign-doctor {
-              font-weight: 700;
-              font-size: 12px;
-              color: #1e293b;
-            }
-            .sign-sub {
-              font-size: 11px;
-              color: #64748b;
-            }
+            .sign-line { width: 220px; border-top: 1px solid #475569; margin-bottom: 6px; }
+            .sign-doctor { font-weight: 700; font-size: 12px; color: #1e293b; }
+            .sign-sub { font-size: 11px; color: #64748b; }
           </style>
         </head>
         <body>
           <div class="header">
-            <div class="logo-box">
-              ${logoHtml}
-            </div>
+            <div class="logo-box">${logoHtml}</div>
             <div class="clinica-info">
               <h1 class="clinica-title">${clinicaNombre}</h1>
               ${eslogan}
@@ -218,7 +188,7 @@ export default function RecetaTab({
             <div><strong>Paciente:</strong> ${paciente.nombre || 'Particular'}</div>
             <div><strong>Fecha:</strong> ${fechaStr}</div>
             <div><strong>Folio:</strong> #${String(paciente.id || 0).padStart(4, '0')}</div>
-            <div><strong>Médico:</strong> ${c.doctor_nombre || 'Médico Tratante'}</div>
+            <div><strong>Médico Tratante:</strong> ${doctorTitular}</div>
             ${c.diagnostico ? `<div style="grid-column: span 2;"><strong>Diagnóstico:</strong> ${c.diagnostico}</div>` : ''}
             ${signosHtml}
           </div>
@@ -246,7 +216,7 @@ export default function RecetaTab({
 
           <div class="footer-sign">
             <div class="sign-line"></div>
-            <div class="sign-doctor">${c.doctor_nombre || 'Firma y Sello Médico'}</div>
+            <div class="sign-doctor">${doctorTitular}</div>
             <div class="sign-sub">Médico Responsable</div>
           </div>
         </body>
