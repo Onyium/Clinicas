@@ -666,17 +666,20 @@ app.get('/api/ping', (req, res) => {
   res.status(200).send('pong');
 });
 
+// ENDPOINT PARA GUARDAR RESULTADOS DE ESTUDIOS
 app.put('/api/estudios-clinicos/:id/resultado', async (req, res) => {
   const { id } = req.params;
   const { resultados_texto, documento_url, estado } = req.body;
+
   try {
     await pool.query(
       `UPDATE estudios_clinicos 
-       SET resultados_texto = ?, documento_url = ?, estado = COALESCE(?, 'Completado') 
+       SET resultados_texto = ?, documento_url = ?, estado = ? 
        WHERE id = ?`,
-      [resultados_texto || null, documento_url || null, estado, id]
+      [resultados_texto || null, documento_url || null, estado || 'Completado', id]
     );
-    res.json({ ok: true, mensaje: 'Resultados del estudio guardados correctamente' });
+
+    res.json({ ok: true, mensaje: 'Resultados guardados correctamente' });
   } catch (err) {
     console.error('Error al actualizar resultado de estudio:', err);
     res.status(500).json({ error: err.message });
