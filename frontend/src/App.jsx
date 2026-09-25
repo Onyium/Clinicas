@@ -9,6 +9,7 @@ import EmergenciaModal from './components/EmergenciaModal';
 import ConfigModal from './components/ConfigModal';
 import RecetaModal from './components/RecetaModal';
 import DiaDetalleModal from './components/DiaDetalleModal';
+import Login from './components/Login';
 import MainLayout from './components/MainLayout';
 // Importamos tu nuevo modal y quitamos el SelectorFechaModal
 import NuevoPacienteModal from './components/NuevoPacienteModal';
@@ -28,6 +29,11 @@ const STATUS_COLORS = {
 };
 
 export default function App() {
+  // NUEVO ESTADO DE SEGURIDAD (Revisa si ya inició sesión antes)
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    localStorage.getItem('clinic_auth') === 'true'
+  );
+
   const [citas, setCitas] = useState([]);
   const [doctores, setDoctores] = useState([]);
   const [config, setConfig] = useState({
@@ -76,6 +82,9 @@ export default function App() {
   });
 
   const fetchData = async () => {
+    // Si no está autenticado, no intentes pedir datos (ahorras recursos del servidor)
+    if (!isAuthenticated) return;
+    
     try {
       const [resCitas, resDocs, resConfig] = await Promise.all([
         api.get('/api/citas'),
@@ -92,8 +101,21 @@ export default function App() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [isAuthenticated]); // Se vuelve a ejecutar cuando el usuario inicia sesión
 
+  // SI NO ESTÁ AUTENTICADO, NO CARGA NADA MÁS QUE EL LOGIN
+  if (!isAuthenticated) {
+    return (
+      <Login 
+        onLogin={() => {
+          localStorage.setItem('clinic_auth', 'true');
+          setIsAuthenticated(true);
+        }} 
+      />
+    );
+  }
+
+  // A PARTIR DE AQUÍ, TODO SIGUE IGUAL. EL USUARIO YA ESTÁ LOGUEADO.
   const citasFiltradas = citas.filter(c => {
     const coincideDoctor = filtroDoctor === 'TODOS' || String(c.doctor_id) === String(filtroDoctor);
     const q = busqueda.trim().toLowerCase();
