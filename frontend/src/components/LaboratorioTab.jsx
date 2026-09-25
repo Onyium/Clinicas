@@ -36,6 +36,27 @@ export default function LaboratorioTab({
     cargarConfig();
   }, []);
 
+  const resolverNombreDoctor = (nombreGuardado) => {
+    const nombresGenericos = [
+      'dr consulta', 
+      'dra. consulta', 
+      'dr. consulta', 
+      'médico tratante', 
+      'dra. liseyda',
+      'medico solicitante'
+    ];
+    const limpio = (nombreGuardado || '').trim().toLowerCase();
+
+    if (!limpio || nombresGenericos.includes(limpio)) {
+      return (
+        localStorage.getItem('clinic_user_nombre') || 
+        configClinica.nombre_doctor || 
+        'Dra. Liseyda Maye'
+      );
+    }
+    return nombreGuardado;
+  };
+
   const ejecutarRecarga = async () => {
     if (!funcionRecarga) return;
     setCargandoRefresco(true);
@@ -92,10 +113,7 @@ export default function LaboratorioTab({
       ? `<img src="${configClinica.logo_url}" alt="Logo" class="logo-img" />` 
       : '';
 
-    const doctorVisual = (c.doctor_nombre && c.doctor_nombre !== 'Dr Consulta') 
-      ? c.doctor_nombre 
-      : (configClinica.nombre_doctor || 'Médico Tratante');
-
+    const doctorTitular = resolverNombreDoctor(c.doctor_nombre);
     const fechaStr = c.fecha_formateada || (c.fecha ? String(c.fecha).slice(0, 10) : new Date().toISOString().slice(0, 10));
 
     const ventanaImpresion = window.open('', '_blank');
@@ -106,10 +124,14 @@ export default function LaboratorioTab({
           <meta charset="utf-8" />
           <title>Orden de Laboratorio - ${paciente.nombre || 'Paciente'}</title>
           <style>
-            @page { size: auto; margin: 15mm; }
+            @page { 
+              size: auto; 
+              margin: 10mm 15mm; 
+            }
             body { 
               font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
-              padding: 10px; 
+              padding: 0; 
+              margin: 0;
               color: #1e293b; 
               font-size: 13px; 
               line-height: 1.5; 
@@ -119,22 +141,22 @@ export default function LaboratorioTab({
               align-items: center; 
               justify-content: space-between; 
               border-bottom: 2px solid #008f85; 
-              padding-bottom: 12px; 
-              margin-bottom: 16px; 
+              padding-bottom: 10px; 
+              margin-bottom: 14px; 
             }
             .logo-box { max-width: 110px; max-height: 80px; }
             .logo-img { max-width: 100px; max-height: 70px; object-fit: contain; }
             .clinica-info { text-align: right; }
-            .clinica-title { font-size: 20px; font-weight: 800; color: #008f85; margin: 0; text-transform: uppercase; }
+            .clinica-title { font-size: 19px; font-weight: 800; color: #008f85; margin: 0; text-transform: uppercase; letter-spacing: 0.5px; }
             .slogan { font-size: 11px; font-style: italic; color: #64748b; margin: 2px 0 0 0; }
             .meta-clinica { font-size: 10px; color: #475569; margin: 2px 0 0 0; }
-            .doc-title { text-align: center; font-size: 13px; font-weight: 700; letter-spacing: 2px; color: #334155; background-color: #f0fdfa; border: 1px solid #ccfbf1; padding: 4px; border-radius: 6px; margin-bottom: 15px; text-transform: uppercase; }
-            .info-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 15px; display: grid; grid-template-columns: 2fr 1fr; gap: 6px 16px; font-size: 12px; }
+            .doc-title { text-align: center; font-size: 12px; font-weight: 700; letter-spacing: 2px; color: #334155; background-color: #f0fdfa; border: 1px solid #ccfbf1; padding: 5px; border-radius: 6px; margin-bottom: 12px; text-transform: uppercase; }
+            .info-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; display: grid; grid-template-columns: 2fr 1fr; gap: 6px 16px; font-size: 12px; }
             .info-box strong { color: #008f85; }
             table { width: 100%; border-collapse: collapse; margin-top: 10px; }
             th { background-color: #f0fdfa; color: #008f85; text-align: left; padding: 8px 10px; font-size: 11px; text-transform: uppercase; border-bottom: 1px solid #99f6e4; }
-            td { padding: 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; font-size: 12px; }
-            .footer-sign { margin-top: 60px; text-align: center; display: flex; flex-direction: column; align-items: center; }
+            td { padding: 9px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; font-size: 12px; }
+            .footer-sign { margin-top: 50px; text-align: center; display: flex; flex-direction: column; align-items: center; }
             .sign-line { width: 220px; border-top: 1px solid #475569; margin-bottom: 6px; }
             .sign-doctor { font-weight: 700; font-size: 12px; color: #1e293b; }
             .sign-sub { font-size: 11px; color: #64748b; }
@@ -155,7 +177,7 @@ export default function LaboratorioTab({
             <div><strong>Paciente:</strong> ${paciente.nombre || 'Particular'}</div>
             <div><strong>Fecha:</strong> ${fechaStr}</div>
             <div><strong>Folio:</strong> #${String(paciente.id || 0).padStart(4, '0')}</div>
-            <div><strong>Médico Solicitante:</strong> ${doctorVisual}</div>
+            <div><strong>Médico Solicitante:</strong> ${doctorTitular}</div>
             ${c.diagnostico ? `<div style="grid-column: span 2;"><strong>Diagnóstico Presuntivo:</strong> ${c.diagnostico}</div>` : ''}
           </div>
           <table>
@@ -178,7 +200,7 @@ export default function LaboratorioTab({
           </table>
           <div class="footer-sign">
             <div class="sign-line"></div>
-            <div class="sign-doctor">${doctorVisual}</div>
+            <div class="sign-doctor">${doctorTitular}</div>
             <div class="sign-sub">Médico Solicitante</div>
           </div>
         </body>
@@ -339,7 +361,7 @@ export default function LaboratorioTab({
               <h3 className="text-sm font-bold text-slate-800">
                 📥 Registrar Resultado: {estudioParaResultado.tipo_estudio}
               </h3>
-              <button onClick={() => setEstudioParaResultado(null)} className="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+              <button onClick={() => setEstudioParaResultado(null)} className="text-slate-400 hover:text-slate-600 text-lg cursor-pointer">✕</button>
             </div>
 
             <form onSubmit={handleGuardarResultado} className="space-y-3 text-xs">
