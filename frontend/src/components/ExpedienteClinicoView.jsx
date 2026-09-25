@@ -14,9 +14,8 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
   const [modoEditar, setModoEditar] = useState(false);
   const [consultaSeleccionada, setConsultaSeleccionada] = useState(null);
 
-  // ESTADO ACTUALIZADO CON CAMPOS CLÍNICOS Y SIGNOS VITALES
   const [formConsulta, setFormConsulta] = useState({
-    doctor_nombre: 'Dra. Liseyda', 
+    doctor_nombre: 'Dra. Liseyda Maye', 
     motivo_consulta: '', 
     enfermedad_actual: '', 
     antecedentes_patologicos: '', 
@@ -93,14 +92,35 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
       const listaEstudiosValidos = estudiosNuevos.filter(e => e.tipo_estudio && e.tipo_estudio.trim() !== '');
 
       if (modoEditar && consultaSeleccionada) {
-        await api.put(`/api/consultas-independientes/${consultaSeleccionada.id}`, { ...formConsulta, medicamentos: listaMedicamentosValidos });
-        alert('✅ Consulta y receta actualizadas correctamente.');
+        await api.put(`/api/consultas-independientes/${consultaSeleccionada.id}`, { 
+          ...formConsulta, 
+          medicamentos: listaMedicamentosValidos 
+        });
+
+        if (listaEstudiosValidos.length > 0) {
+          for (const est of listaEstudiosValidos) {
+            await api.post('/api/estudios-clinicos', { 
+              consulta_id: consultaSeleccionada.id, 
+              paciente_id: pacienteId, 
+              ...est 
+            });
+          }
+        }
+        alert('✅ Consulta, receta y estudios actualizados con éxito.');
       } else {
-        const res = await api.post('/api/consultas-independientes', { paciente_id: pacienteId, ...formConsulta, medicamentos: listaMedicamentosValidos });
+        const res = await api.post('/api/consultas-independientes', { 
+          paciente_id: pacienteId, 
+          ...formConsulta, 
+          medicamentos: listaMedicamentosValidos 
+        });
         const nuevaConsultaId = res.data.id;
         if (listaEstudiosValidos.length > 0 && nuevaConsultaId) {
           for (const est of listaEstudiosValidos) {
-            await api.post(`/api/estudios-clinicos`, { consulta_id: nuevaConsultaId, paciente_id: pacienteId, ...est });
+            await api.post('/api/estudios-clinicos', { 
+              consulta_id: nuevaConsultaId, 
+              paciente_id: pacienteId, 
+              ...est 
+            });
           }
         }
         alert('✅ Consulta médica, receta y estudios guardados con éxito.');
@@ -155,7 +175,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
   const activarModoEdicion = () => {
     if (!consultaSeleccionada) return;
     setFormConsulta({
-      doctor_nombre: consultaSeleccionada.doctor_nombre || 'Dra. Consulta', 
+      doctor_nombre: consultaSeleccionada.doctor_nombre || 'Dra. Liseyda Maye', 
       motivo_consulta: consultaSeleccionada.motivo_consulta || '',
       enfermedad_actual: consultaSeleccionada.enfermedad_actual || '', 
       antecedentes_patologicos: consultaSeleccionada.antecedentes_patologicos || '', 
@@ -168,10 +188,30 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
       temperatura: consultaSeleccionada.temperatura || '',
       presion_arterial: consultaSeleccionada.presion_arterial || ''
     });
+
     const recs = tratamientos.filter(t => t.consulta_id === consultaSeleccionada.id);
     if (recs.length > 0) {
-      setMedicamentos(recs.map(r => ({ medicamento: r.medicamento || '', frecuencia: r.dosis_indicacion || 'Cada 8 horas', dias_tratamiento: r.dias_tratamiento || 5, indicacion: '' })));
-    } else { setMedicamentos([{ medicamento: '', frecuencia: 'Cada 8 horas', dias_tratamiento: 5, indicacion: '' }]); }
+      setMedicamentos(recs.map(r => ({ 
+        medicamento: r.medicamento || '', 
+        frecuencia: r.dosis_indicacion || 'Cada 8 horas', 
+        dias_tratamiento: r.dias_tratamiento || 5, 
+        indicacion: '' 
+      })));
+    } else { 
+      setMedicamentos([{ medicamento: '', frecuencia: 'Cada 8 horas', dias_tratamiento: 5, indicacion: '' }]); 
+    }
+
+    const ests = estudios.filter(e => e.consulta_id === consultaSeleccionada.id);
+    if (ests.length > 0) {
+      setEstudiosNuevos(ests.map(e => ({
+        tipo_estudio: e.tipo_estudio || '',
+        laboratorio: e.laboratorio || '',
+        observaciones: e.observaciones || ''
+      })));
+    } else {
+      setEstudiosNuevos([{ tipo_estudio: '', laboratorio: '', observaciones: '' }]);
+    }
+
     setModoEditar(true);
     setModoCrear(false);
     setSubTab('historia');
@@ -445,6 +485,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                         estudiosDeConsulta={estudiosDeConsulta} 
                         setMostrarModalEstudio={setMostrarModalEstudio} 
                         handleEliminarEstudio={handleEliminarEstudio} 
+                        onRecargar={cargarExpediente}
                       />
                     )}
                   </div>
@@ -476,7 +517,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
         {/* COLUMNA DERECHA */}
         <aside className="w-72 bg-slate-50 flex flex-col shrink-0 overflow-y-auto p-4 space-y-4 border-l border-slate-200">
           <div className="space-y-2">
-            <button onClick={() => { setModoCrear(true); setModoEditar(false); setSeccionActiva('inicio'); setSubTab('historia'); setFormConsulta({ doctor_nombre: 'Dra. Consulta', motivo_consulta: '', enfermedad_actual: '', antecedentes_patologicos: '', examen_fisico: '', reporte_examenes: '', diagnostico: '', plan_tratamiento: '', peso: '', talla: '', temperatura: '', presion_arterial: '' }); setMedicamentos([{ medicamento: '', frecuencia: 'Cada 8 horas', dias_tratamiento: 5, indicacion: '' }]); setEstudiosNuevos([{ tipo_estudio: '', laboratorio: '', observaciones: '' }]); }} className="w-full bg-[#10a37f] hover:bg-emerald-700 text-white font-bold text-xs p-2.5 rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">➕ Nueva Consulta</button>
+            <button onClick={() => { setModoCrear(true); setModoEditar(false); setSeccionActiva('inicio'); setSubTab('historia'); setFormConsulta({ doctor_nombre: 'Dra. Liseyda Maye', motivo_consulta: '', enfermedad_actual: '', antecedentes_patologicos: '', examen_fisico: '', reporte_examenes: '', diagnostico: '', plan_tratamiento: '', peso: '', talla: '', temperatura: '', presion_arterial: '' }); setMedicamentos([{ medicamento: '', frecuencia: 'Cada 8 horas', dias_tratamiento: 5, indicacion: '' }]); setEstudiosNuevos([{ tipo_estudio: '', laboratorio: '', observaciones: '' }]); }} className="w-full bg-[#10a37f] hover:bg-emerald-700 text-white font-bold text-xs p-2.5 rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">➕ Nueva Consulta</button>
             <button onClick={() => onAgendarCita(paciente)} className="w-full bg-white border border-slate-300 hover:bg-blue-50 text-slate-700 font-bold text-xs p-2.5 rounded-xl shadow-2xs transition flex items-center justify-center gap-1.5 cursor-pointer">📅 Agendar Cita</button>
           </div>
           <div className="flex-1">
