@@ -3,6 +3,21 @@ import api from '../api';
 import RecetaTab from './RecetaTab';
 import LaboratorioTab from './LaboratorioTab';
 
+// Función utilitaria para calcular la edad exacta a partir de la fecha de nacimiento
+function calcularEdad(fechaNacimiento) {
+  if (!fechaNacimiento) return null;
+  const hoy = new Date();
+  const fechaNac = new Date(fechaNacimiento);
+  if (isNaN(fechaNac.getTime())) return null;
+
+  let edad = hoy.getFullYear() - fechaNac.getFullYear();
+  const mes = hoy.getMonth() - fechaNac.getMonth();
+  if (mes < 0 || (mes === 0 && hoy.getDate() < fechaNac.getDate())) {
+    edad--;
+  }
+  return edad >= 0 ? edad : null;
+}
+
 export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarCita }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -106,7 +121,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
             });
           }
         }
-        alert('✅ Consulta, receta y estudios actualizados con éxito.');
+        alert('✅ Consulta, signos vitales, receta y estudios actualizados con éxito.');
       } else {
         const res = await api.post('/api/consultas-independientes', { 
           paciente_id: pacienteId, 
@@ -220,7 +235,15 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
   const handleGuardarGeneral = async (e) => {
     e.preventDefault();
     setGuardandoGeneral(true);
-    try { await api.post('/api/pacientes', { id: pacienteId, ...formGeneral }); alert('✅ Ficha médica actualizada con éxito.'); await cargarExpediente(); } catch (err) { alert('Error al guardar datos generales'); } finally { setGuardandoGeneral(false); }
+    try { 
+      await api.post('/api/pacientes', { id: pacienteId, ...formGeneral }); 
+      alert('✅ Ficha médica actualizada con éxito.'); 
+      await cargarExpediente(); 
+    } catch (err) { 
+      alert('Error al guardar datos generales'); 
+    } finally { 
+      setGuardandoGeneral(false); 
+    }
   };
 
   if (loading) return <div className="h-screen flex items-center justify-center bg-slate-100 text-slate-500 text-sm">Cargando expediente clínico...</div>;
@@ -231,6 +254,9 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
   const estudios = data?.estudios || [];
   const recetasDeConsulta = consultaSeleccionada ? tratamientos.filter((t) => t.consulta_id === consultaSeleccionada.id) : [];
   const estudiosDeConsulta = consultaSeleccionada ? estudios.filter((e) => e.consulta_id === consultaSeleccionada.id) : [];
+  
+  // Cálculo de edad dinámica
+  const edadCalculada = calcularEdad(paciente.fecha_nacimiento);
 
   return (
     <div className="h-screen flex flex-col bg-[#eef2f6] font-sans overflow-hidden">
@@ -256,7 +282,22 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
               <div className="w-16 h-16 rounded-full bg-blue-50 border-2 border-blue-200 flex items-center justify-center text-2xl font-black text-blue-700 shadow-inner mb-2">{paciente.nombre?.charAt(0) || 'P'}</div>
             )}
             <h2 className="text-sm font-black text-slate-800 uppercase tracking-tight">{paciente.nombre}</h2>
-            <span className="text-xs text-blue-600 font-mono font-bold mt-0.5">Folio: #{String(paciente.id).padStart(4, '0')}</span>
+            
+            {/* EDAD Y GÉNERO CALCULADOS */}
+            <div className="flex items-center gap-1.5 mt-1">
+              {edadCalculada !== null ? (
+                <span className="text-[11px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-md border border-emerald-200">
+                  🎂 {edadCalculada} años
+                </span>
+              ) : (
+                <span className="text-[11px] text-slate-400 italic">Edad sin definir</span>
+              )}
+              <span className="text-[11px] bg-blue-50 text-blue-700 font-semibold px-2 py-0.5 rounded-md border border-blue-100">
+                {paciente.sexo === 'M' ? 'Masculino' : paciente.sexo === 'F' ? 'Femenino' : 'Otro'}
+              </span>
+            </div>
+
+            <span className="text-xs text-blue-600 font-mono font-bold mt-1.5">Folio: #{String(paciente.id).padStart(4, '0')}</span>
             <span className="text-xs text-slate-500 font-mono mt-0.5">📞 {paciente.telefono}</span>
             {paciente.alergias && paciente.alergias.toLowerCase() !== 'ninguna' && (
               <div className="mt-3 w-full bg-rose-600 text-white text-[11px] font-bold py-1 px-2 rounded-lg shadow-xs uppercase tracking-wider">⚠️ Alergia: {paciente.alergias}</div>
@@ -306,7 +347,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                   {subTab === 'historia' && (
                     <div className="space-y-6">
                       
-                      {/* SIGNOS VITALES DEL PACIENTE */}
+                      {/* SIGNOS VITALES DEL PACIENTE (INCLUYE TEMPERATURA) */}
                       <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
                         <span className="text-[11px] font-black text-slate-700 uppercase tracking-wider block mb-2">
                           🩺 Signos Vitales de la Consulta
@@ -333,13 +374,13 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                             />
                           </div>
                           <div>
-                            <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Temperatura</label>
+                            <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Temperatura (°C)</label>
                             <input 
                               type="text" 
                               placeholder="ej. 36.5 °C" 
                               value={formConsulta.temperatura} 
                               onChange={(e) => setFormConsulta({...formConsulta, temperatura: e.target.value})} 
-                              className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs outline-none focus:ring-1 focus:ring-blue-500" 
+                              className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs outline-none focus:ring-1 focus:ring-blue-500 font-semibold text-rose-600" 
                             />
                           </div>
                           <div>
@@ -429,12 +470,12 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                           <div><span className="text-[11px] text-blue-600 font-bold block uppercase">Atención Registrada</span><h4 className="text-base font-bold text-slate-800">{consultaSeleccionada.fecha_formateada || String(consultaSeleccionada.fecha || '').slice(0, 16)}</h4><span className="text-xs text-slate-500 font-medium">Médico: {consultaSeleccionada.doctor_nombre}</span></div>
                         </div>
 
-                        {/* SIGNOS VITALES REGISTRADOS */}
+                        {/* SIGNOS VITALES REGISTRADOS CON TEMPERATURA */}
                         {(consultaSeleccionada.peso || consultaSeleccionada.talla || consultaSeleccionada.temperatura || consultaSeleccionada.presion_arterial) && (
                           <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100 flex flex-wrap gap-4 text-xs text-slate-700">
                             {consultaSeleccionada.peso && <div><span className="font-bold text-blue-900">Peso:</span> {consultaSeleccionada.peso}</div>}
                             {consultaSeleccionada.talla && <div><span className="font-bold text-blue-900">Talla:</span> {consultaSeleccionada.talla}</div>}
-                            {consultaSeleccionada.temperatura && <div><span className="font-bold text-blue-900">Temp:</span> {consultaSeleccionada.temperatura}</div>}
+                            {consultaSeleccionada.temperatura && <div><span className="font-bold text-rose-600">🌡️ Temp:</span> {consultaSeleccionada.temperatura}</div>}
                             {consultaSeleccionada.presion_arterial && <div><span className="font-bold text-blue-900">P.A.:</span> {consultaSeleccionada.presion_arterial}</div>}
                           </div>
                         )}
@@ -501,10 +542,38 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                   <div><label className="text-xs font-bold text-slate-700 block mb-1">Nombre Completo</label><input type="text" value={formGeneral.nombre} onChange={(e) => setFormGeneral({ ...formGeneral, nombre: e.target.value })} className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:border-blue-500" /></div>
                   <div><label className="text-xs font-bold text-slate-700 block mb-1">Teléfono WhatsApp</label><input type="text" value={formGeneral.telefono} onChange={(e) => setFormGeneral({ ...formGeneral, telefono: e.target.value })} className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:border-blue-500 font-mono" /></div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><label className="text-xs font-bold text-slate-700 block mb-1">Fecha de Nacimiento</label><input type="date" value={formGeneral.fecha_nacimiento} onChange={(e) => setFormGeneral({ ...formGeneral, fecha_nacimiento: e.target.value })} className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:border-blue-500" /></div>
-                  <div><label className="text-xs font-bold text-slate-700 block mb-1">Género</label><select value={formGeneral.sexo} onChange={(e) => setFormGeneral({ ...formGeneral, sexo: e.target.value })} className="w-full border border-slate-300 rounded-xl p-2 text-xs bg-white outline-none focus:border-blue-500"><option value="M">Masculino</option><option value="F">Femenino</option><option value="Otro">Otro</option></select></div>
+                
+                {/* FECHA DE NACIMIENTO Y EDAD EN TIEMPO REAL */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Fecha de Nacimiento</label>
+                    <input 
+                      type="date" 
+                      value={formGeneral.fecha_nacimiento} 
+                      onChange={(e) => setFormGeneral({ ...formGeneral, fecha_nacimiento: e.target.value })} 
+                      className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:border-blue-500" 
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Edad Actual (Calculada)</label>
+                    <input 
+                      type="text" 
+                      readOnly 
+                      disabled
+                      value={calcularEdad(formGeneral.fecha_nacimiento) !== null ? `${calcularEdad(formGeneral.fecha_nacimiento)} años` : 'Sin definir'} 
+                      className="w-full border border-slate-200 bg-slate-100 text-slate-700 font-bold rounded-xl p-2 text-xs cursor-not-allowed font-mono" 
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Género</label>
+                    <select value={formGeneral.sexo} onChange={(e) => setFormGeneral({ ...formGeneral, sexo: e.target.value })} className="w-full border border-slate-300 rounded-xl p-2 text-xs bg-white outline-none focus:border-blue-500">
+                      <option value="M">Masculino</option>
+                      <option value="F">Femenino</option>
+                      <option value="Otro">Otro</option>
+                    </select>
+                  </div>
                 </div>
+
                 <div><label className="text-xs font-bold text-slate-700 block mb-1">URL Foto (Opcional)</label><input type="url" value={formGeneral.foto_url} onChange={(e) => setFormGeneral({ ...formGeneral, foto_url: e.target.value })} className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:border-blue-500 font-mono" /></div>
                 <div><label className="text-xs font-bold text-slate-700 block mb-1">Alergias</label><input type="text" value={formGeneral.alergias} onChange={(e) => setFormGeneral({ ...formGeneral, alergias: e.target.value })} className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:border-blue-500" /></div>
                 <div><label className="text-xs font-bold text-slate-700 block mb-1">Antecedentes Generales</label><textarea rows="3" value={formGeneral.antecedentes} onChange={(e) => setFormGeneral({ ...formGeneral, antecedentes: e.target.value })} className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:border-blue-500" /></div>
