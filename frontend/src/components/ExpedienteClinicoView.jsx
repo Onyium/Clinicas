@@ -16,7 +16,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
 
   // ESTADO ACTUALIZADO CON CAMPOS CLÍNICOS Y SIGNOS VITALES
   const [formConsulta, setFormConsulta] = useState({
-    doctor_nombre: 'Dra. Consulta', 
+    doctor_nombre: 'Dra. Liseyda', 
     motivo_consulta: '', 
     enfermedad_actual: '', 
     antecedentes_patologicos: '', 
