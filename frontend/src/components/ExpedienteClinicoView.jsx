@@ -371,6 +371,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                       estudiosDeConsulta={estudiosDeConsulta} 
                       setMostrarModalEstudio={setMostrarModalEstudio} 
                       handleEliminarEstudio={handleEliminarEstudio} 
+                      onRecargar={cargarExpediente}
                     />
                   )}
                 </form>

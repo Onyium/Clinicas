@@ -13,12 +13,16 @@ export default function LaboratorioTab({
   estudiosDeConsulta = [],
   setMostrarModalEstudio,
   handleEliminarEstudio,
-  onActualizarExpediente
+  onActualizarExpediente,
+  onRecargar
 }) {
   const [configClinica, setConfigClinica] = useState({});
   const [estudioParaResultado, setEstudioParaResultado] = useState(null);
   const [formResultado, setFormResultado] = useState({ resultados_texto: '', documento_url: '' });
   const [guardandoResultado, setGuardandoResultado] = useState(false);
+  const [cargandoRefresco, setCargandoRefresco] = useState(false);
+
+  const funcionRecarga = onActualizarExpediente || onRecargar;
 
   useEffect(() => {
     const cargarConfig = async () => {
@@ -31,6 +35,18 @@ export default function LaboratorioTab({
     };
     cargarConfig();
   }, []);
+
+  const ejecutarRecarga = async () => {
+    if (!funcionRecarga) return;
+    setCargandoRefresco(true);
+    try {
+      await funcionRecarga();
+    } catch (e) {
+      console.error('Error al refrescar estudios:', e);
+    } finally {
+      setTimeout(() => setCargandoRefresco(false), 500);
+    }
+  };
 
   const abrirCargarResultado = (est) => {
     setEstudioParaResultado(est);
@@ -52,7 +68,7 @@ export default function LaboratorioTab({
       });
       alert('✅ Resultados guardados con éxito.');
       setEstudioParaResultado(null);
-      if (onActualizarExpediente) onActualizarExpediente();
+      if (funcionRecarga) await funcionRecarga();
     } catch (err) {
       console.error(err);
       alert('Error guardando los resultados del estudio.');
@@ -75,6 +91,12 @@ export default function LaboratorioTab({
     const logoHtml = configClinica.logo_url 
       ? `<img src="${configClinica.logo_url}" alt="Logo" class="logo-img" />` 
       : '';
+
+    const doctorVisual = (c.doctor_nombre && c.doctor_nombre !== 'Dr Consulta') 
+      ? c.doctor_nombre 
+      : (configClinica.nombre_doctor || 'Médico Tratante');
+
+    const fechaStr = c.fecha_formateada || (c.fecha ? String(c.fecha).slice(0, 10) : new Date().toISOString().slice(0, 10));
 
     const ventanaImpresion = window.open('', '_blank');
     ventanaImpresion.document.write(`
@@ -131,9 +153,9 @@ export default function LaboratorioTab({
           <div class="doc-title">Orden de Laboratorio & Exámenes Clínicos</div>
           <div class="info-box">
             <div><strong>Paciente:</strong> ${paciente.nombre || 'Particular'}</div>
-            <div><strong>Fecha:</strong> ${c.fecha_formateada || (c.fecha ? String(c.fecha).slice(0, 10) : new Date().toISOString().slice(0, 10))}</div>
+            <div><strong>Fecha:</strong> ${fechaStr}</div>
             <div><strong>Folio:</strong> #${String(paciente.id || 0).padStart(4, '0')}</div>
-            <div><strong>Médico Solicitante:</strong> ${c.doctor_nombre || 'Médico Tratante'}</div>
+            <div><strong>Médico Solicitante:</strong> ${doctorVisual}</div>
             ${c.diagnostico ? `<div style="grid-column: span 2;"><strong>Diagnóstico Presuntivo:</strong> ${c.diagnostico}</div>` : ''}
           </div>
           <table>
@@ -156,7 +178,7 @@ export default function LaboratorioTab({
           </table>
           <div class="footer-sign">
             <div class="sign-line"></div>
-            <div class="sign-doctor">${c.doctor_nombre || 'Firma y Sello Médico'}</div>
+            <div class="sign-doctor">${doctorVisual}</div>
             <div class="sign-sub">Médico Solicitante</div>
           </div>
         </body>
@@ -209,9 +231,25 @@ export default function LaboratorioTab({
   return (
     <div className="border border-slate-200 rounded-2xl p-5 bg-white shadow-2xs space-y-4">
       <div className="flex justify-between items-center mb-2">
-        <h4 className="text-xs font-bold text-blue-900 uppercase">
-          🧪 Estudios / Laboratorios ({estudiosDeConsulta.length})
-        </h4>
+        <div className="flex items-center gap-2">
+          <h4 className="text-xs font-bold text-blue-900 uppercase">
+            🧪 Estudios / Laboratorios ({estudiosDeConsulta.length})
+          </h4>
+          
+          {funcionRecarga && (
+            <button
+              type="button"
+              onClick={ejecutarRecarga}
+              title="Actualizar lista de estudios"
+              className="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-700 transition cursor-pointer border border-slate-200 shadow-2xs"
+            >
+              <span className={`inline-block text-xs font-bold ${cargandoRefresco ? 'animate-spin' : ''}`}>
+                🔄
+              </span>
+            </button>
+          )}
+        </div>
+
         <div className="flex gap-2">
           <button
             onClick={() => setMostrarModalEstudio(true)}
