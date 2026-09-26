@@ -11,11 +11,9 @@ export default function RecetaTab({
   eliminarMedicamento,
   recetasDeConsulta = []
 }) {
-  const imprimirReceta = () => {
-    window.print();
-  };
+  const lista = (modoCrear || modoEditar) ? medicamentos : recetasDeConsulta;
 
-  // Cálculo de edad para la receta
+  // Cálculo de edad para el membrete
   const calcularEdad = (fechaNac) => {
     if (!fechaNac) return paciente?.edad ? `${paciente.edad} años` : '---';
     const hoy = new Date();
@@ -26,14 +24,131 @@ export default function RecetaTab({
     return edad >= 0 ? `${edad} años` : '---';
   };
 
-  const lista = (modoCrear || modoEditar) ? medicamentos : recetasDeConsulta;
+  const imprimirReceta = () => {
+    if (lista.length === 0) {
+      alert('No hay medicamentos registrados para imprimir.');
+      return;
+    }
+
+    // Recopilar datos de la consulta para el membrete
+    const doctorTitular = consultaSeleccionada.doctor_nombre || 'DRA. LISEYDA MAYE';
+    const pacienteNombre = paciente?.nombre || 'Nombre no registrado';
+    const fecha = consultaSeleccionada?.fecha_formateada?.slice(0, 10) || new Date().toISOString().slice(0, 10);
+    const edadStr = calcularEdad(paciente?.fecha_nacimiento);
+    const temp = consultaSeleccionada?.temperatura || '---';
+    const pa = consultaSeleccionada?.presion_arterial || '---';
+    const peso = consultaSeleccionada?.peso || '---';
+    const talla = consultaSeleccionada?.talla || '---';
+    const tutor = paciente?.responsable_nombre ? `${paciente.responsable_nombre} (${paciente.responsable_parentesco || 'Tutor'})` : '';
+
+    // Generar la lista de fármacos en HTML
+    const medicamentosHtml = lista.map((med, i) => `
+      <div style="border-bottom: 1px dashed #cbd5e1; padding-bottom: 12px; margin-bottom: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+          <span style="font-weight: 800; font-size: 15px; color: #0f172a;">${i + 1}. ${med.medicamento || med.nombre}</span>
+          ${med.dias_tratamiento ? `<span style="font-size: 12px; color: #64748b; font-weight: 600;">Por: ${med.dias_tratamiento} días</span>` : ''}
+        </div>
+        <div style="font-size: 13px; color: #475569; font-style: italic; margin-top: 4px; padding-left: 15px;">
+          Tomar / Aplicar: ${med.frecuencia || med.dosis_indicacion || 'Según indicación médica'}
+        </div>
+      </div>
+    `).join('');
+
+    // Abrir ventana aislada solo con el diseño de la receta
+    const ventana = window.open('', '_blank');
+    ventana.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Receta Médica - ${pacienteNombre}</title>
+          <style>
+            @page { size: auto; margin: 15mm; }
+            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; line-height: 1.5; margin: 0; padding: 0; }
+            .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+            
+            /* ENCABEZADO MÉDICO */
+            .header { text-align: center; border-bottom: 2px solid #334155; padding-bottom: 15px; margin-bottom: 20px; }
+            .doc-name { font-size: 24px; font-weight: 900; color: #1b4e7b; text-transform: uppercase; margin: 0; letter-spacing: 1px; }
+            .doc-esp { font-size: 14px; font-weight: 700; color: #475569; text-transform: uppercase; margin: 5px 0; }
+            .doc-meta { font-size: 12px; color: #64748b; font-family: monospace; margin: 0; }
+            
+            /* CINTILLO DEL PACIENTE Y SIGNOS */
+            .patient-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 25px; }
+            .patient-row-1 { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; }
+            .patient-row-2 { display: flex; flex-wrap: wrap; gap: 15px; border-top: 1px solid #e2e8f0; padding-top: 10px; font-size: 12px; }
+            .label { font-weight: 700; color: #64748b; }
+            .val { font-weight: 700; color: #0f172a; }
+            .val-red { font-weight: 700; color: #e11d48; }
+            
+            /* SÍMBOLO RP Y CUERPO */
+            .rp { font-size: 32px; font-family: serif; font-weight: 900; font-style: italic; color: #1e3a8a; margin-bottom: 20px; }
+            .meds-container { min-height: 300px; }
+            
+            /* PIE DE FIRMA */
+            .footer { margin-top: 60px; border-top: 1px solid #e2e8f0; padding-top: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+            .warnings { font-size: 11px; color: #94a3b8; line-height: 1.6; }
+            .signature { text-align: center; width: 250px; }
+            .sign-line { border-bottom: 1px solid #0f172a; margin-bottom: 5px; height: 40px; }
+            .sign-text { font-size: 12px; font-weight: 800; color: #0f172a; margin: 0; }
+            .sign-sub { font-size: 10px; color: #64748b; text-transform: uppercase; margin: 2px 0 0 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h2 class="doc-name">${doctorTitular}</h2>
+              <p class="doc-esp">Médico Internista</p>
+              <p class="doc-meta">Exeq: 504-20 • Centro Médico Especializado</p>
+            </div>
+
+            <div class="patient-box">
+              <div class="patient-row-1">
+                <div><span class="label">PACIENTE:</span> <span class="val" style="text-transform: uppercase;">${pacienteNombre}</span></div>
+                <div><span class="label">FECHA:</span> <span class="val font-mono">${fecha}</span></div>
+              </div>
+              <div class="patient-row-2">
+                <div><span class="label">EDAD:</span> <span class="val">${edadStr}</span></div>
+                ${tutor ? `<div><span class="label">TUTOR:</span> <span class="val">${tutor}</span></div>` : ''}
+                <div><span class="label">TEMP:</span> <span class="val-red">${temp}</span></div>
+                <div><span class="label">P.A:</span> <span class="val">${pa}</span></div>
+                <div><span class="label">PESO:</span> <span class="val">${peso}</span></div>
+                <div><span class="label">TALLA:</span> <span class="val">${talla}</span></div>
+              </div>
+            </div>
+
+            <div class="rp">Rp.</div>
+
+            <div class="meds-container">
+              ${medicamentosHtml}
+            </div>
+
+            <div class="footer">
+              <div class="warnings">
+                * Conserve esta receta durante su tratamiento.<br/>
+                * En caso de reacción adversa suspenda y consulte a su médico.
+              </div>
+              <div class="signature">
+                <div class="sign-line"></div>
+                <p class="sign-text">Firma / Sello Médico</p>
+                <p class="sign-sub">${doctorTitular}</p>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `);
+    ventana.document.close();
+    ventana.focus();
+    setTimeout(() => ventana.print(), 500);
+  };
 
   return (
     <div className="space-y-6">
-      {/* Botón de impresión */}
+      {/* BOTÓN DE IMPRESIÓN */}
       <div className="flex justify-between items-center no-print">
         <span className="text-xs text-slate-500 font-semibold">
-          Vista previa y emisión de receta médica
+          Gestión de prescripción médica
         </span>
         <button
           type="button"
@@ -44,9 +159,9 @@ export default function RecetaTab({
         </button>
       </div>
 
-      {/* Editor interactivo cuando está en modo crear/editar */}
+      {/* MODO EDICIÓN / CREACIÓN */}
       {(modoCrear || modoEditar) && (
-        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3 no-print">
+        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
           <div className="flex justify-between items-center">
             <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider">
               Medicamentos a prescribir
@@ -109,111 +224,31 @@ export default function RecetaTab({
         </div>
       )}
 
-      {/* PLANTILLA DE LA RECETA TAL CUAL LA IMAGEN */}
-      <div className="receta-medica-print bg-white p-8 rounded-2xl border border-slate-300 shadow-sm max-w-2xl mx-auto font-sans text-slate-800">
-        
-        {/* ENCABEZADO MÉDICO */}
-        <div className="text-center border-b-2 border-slate-700 pb-3 mb-4">
-          <h2 className="text-xl font-black text-[#1b4e7b] tracking-wide uppercase">
-            {consultaSeleccionada.doctor_nombre || 'DRA. LISEYDA MAYE'}
-          </h2>
-          <p className="text-xs font-bold text-slate-600 tracking-wider uppercase">
-            Médico Internista
-          </p>
-          <p className="text-[11px] text-slate-500 font-mono mt-0.5">
-            Exeq: 504-20 • Centro Médico Especializado
-          </p>
-        </div>
-
-        {/* CINTILLO DEL PACIENTE CON EDAD Y TEMPERATURA */}
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs mb-5">
-          <div className="flex justify-between items-center mb-1.5">
-            <div>
-              <span className="font-bold text-slate-500">PACIENTE: </span>
-              <span className="font-bold text-slate-900 uppercase">{paciente?.nombre || 'Nombre no registrado'}</span>
-            </div>
-            <div>
-              <span className="font-bold text-slate-500">FECHA: </span>
-              <span className="font-mono font-bold text-slate-900">
-                {consultaSeleccionada?.fecha_formateada?.slice(0, 10) || new Date().toISOString().slice(0, 10)}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-x-6 gap-y-1 text-[11px] border-t border-slate-200 pt-1.5 mt-1.5">
-            <div>
-              <span className="font-bold text-slate-500">EDAD: </span>
-              <span className="font-bold text-slate-800">{calcularEdad(paciente?.fecha_nacimiento)}</span>
-            </div>
-            {paciente?.responsable_nombre && (
-              <div>
-                <span className="font-bold text-slate-500">TUTOR/RESPONSABLE: </span>
-                <span className="font-semibold text-slate-800">{paciente.responsable_nombre} ({paciente.responsable_parentesco || 'Tutor'})</span>
-              </div>
-            )}
-            <div>
-              <span className="font-bold text-slate-500">TEMP: </span>
-              <span className="font-bold text-rose-600">{consultaSeleccionada?.temperatura || '---'}</span>
-            </div>
-            <div>
-              <span className="font-bold text-slate-500">P.A: </span>
-              <span className="font-semibold text-slate-800">{consultaSeleccionada?.presion_arterial || '---'}</span>
-            </div>
-            <div>
-              <span className="font-bold text-slate-500">PESO: </span>
-              <span className="font-semibold text-slate-800">{consultaSeleccionada?.peso || '---'}</span>
-            </div>
-            <div>
-              <span className="font-bold text-slate-500">TALLA: </span>
-              <span className="font-semibold text-slate-800">{consultaSeleccionada?.talla || '---'}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* SIMBOLO RP / RX */}
-        <div className="mb-4">
-          <span className="text-2xl font-serif font-black italic text-blue-900">Rp.</span>
-        </div>
-
-        {/* LISTADO DE MEDICAMENTOS */}
-        <div className="space-y-4 min-h-[220px] px-2">
+      {/* VISTA PREVIA EN PANTALLA (SOLO LECTURA) */}
+      {!modoCrear && !modoEditar && (
+        <div className="bg-white p-6 rounded-2xl border border-slate-200">
+          <h4 className="text-xs font-black text-slate-800 uppercase border-b border-slate-200 pb-2 mb-4">
+            Receta Emitida
+          </h4>
           {lista.length === 0 ? (
-            <p className="text-xs text-slate-400 italic">No se han registrado medicamentos en esta consulta.</p>
+            <p className="text-xs text-slate-500 italic">No hay medicamentos registrados.</p>
           ) : (
-            lista.map((med, i) => (
-              <div key={i} className="border-b border-dashed border-slate-200 pb-2.5">
-                <div className="flex justify-between items-baseline">
-                  <span className="font-bold text-xs text-slate-900">
-                    {i + 1}. {med.medicamento || med.nombre}
+            <div className="space-y-3">
+              {lista.map((med, i) => (
+                <div key={i} className="flex justify-between items-center border-b border-slate-100 pb-2">
+                  <div>
+                    <p className="text-sm font-bold text-slate-800">{i + 1}. {med.medicamento || med.nombre}</p>
+                    <p className="text-xs text-slate-500 italic">Tomar: {med.frecuencia || med.dosis_indicacion}</p>
+                  </div>
+                  <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded-md">
+                    {med.dias_tratamiento} días
                   </span>
-                  {med.dias_tratamiento && (
-                    <span className="text-[11px] text-slate-500 font-medium">
-                      Por: {med.dias_tratamiento} días
-                    </span>
-                  )}
                 </div>
-                <div className="text-[11px] text-slate-600 italic pl-4 mt-0.5">
-                  Tomar / Aplicar: {med.frecuencia || med.dosis_indicacion || 'Según indicación médica'}
-                </div>
-              </div>
-            ))
+              ))}
+            </div>
           )}
         </div>
-
-        {/* PIE DE RECETA: FIRMA Y SELLO */}
-        <div className="mt-14 pt-6 border-t border-slate-200 flex justify-between items-end">
-          <div className="text-[10px] text-slate-400">
-            * Conserve esta receta durante su tratamiento.<br/>
-            * En caso de reacción adversa suspenda y consulte a su médico.
-          </div>
-          <div className="text-center w-48">
-            <div className="border-b border-slate-800 mb-1 w-full"></div>
-            <p className="text-[11px] font-bold text-slate-800">Firma / Sello Médico</p>
-            <p className="text-[9px] text-slate-500 uppercase">{consultaSeleccionada.doctor_nombre || 'Dra. Liseyda Maye'}</p>
-          </div>
-        </div>
-
-      </div>
+      )}
     </div>
   );
 }

@@ -3,7 +3,6 @@ import api from '../api';
 import RecetaTab from './RecetaTab';
 import LaboratorioTab from './LaboratorioTab';
 
-// Calcula edad a partir de fecha
 function calcularEdadDesdeFecha(fechaNacimiento) {
   if (!fechaNacimiento) return '';
   const hoy = new Date();
@@ -18,7 +17,6 @@ function calcularEdadDesdeFecha(fechaNacimiento) {
   return edad >= 0 ? edad : '';
 }
 
-// Estima una fecha a partir de una edad numérica ingresada
 function estimarFechaDesdeEdad(edad) {
   if (edad === '' || isNaN(edad) || Number(edad) < 0) return '';
   const hoy = new Date();
@@ -162,7 +160,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
             });
           }
         }
-        alert('✅ Consulta, signos vitales y receta actualizados con éxito.');
+        alert('✅ Consulta, signos vitales, receta y estudios actualizados con éxito.');
       } else {
         const res = await api.post('/api/consultas-independientes', { 
           paciente_id: pacienteId, 
@@ -314,7 +312,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
       {/* ÁREA PRINCIPAL */}
       <div className="flex-1 flex overflow-hidden">
         
-        {/* COLUMNA IZQUIERDA: RESUMEN DEL PACIENTE */}
+        {/* COLUMNA IZQUIERDA */}
         <aside className="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0 overflow-y-auto">
           <div className="p-4 flex flex-col items-center text-center border-b border-slate-100">
             {paciente.foto_url ? (
@@ -326,7 +324,6 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
             )}
             <h2 className="text-sm font-black text-slate-800 uppercase tracking-tight">{paciente.nombre}</h2>
             
-            {/* ETIQUETA DINÁMICA DE EDAD */}
             <div className="flex items-center gap-1.5 mt-1.5 flex-wrap justify-center">
               <span className="text-[11px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-md border border-emerald-200">
                 🎂 {edadActual !== '' ? `${edadActual} años` : 'Edad sin definir'}
@@ -336,7 +333,6 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
               </span>
             </div>
 
-            {/* AVISO MENOR DE EDAD EN LATERAL */}
             {esMenorDeEdad && (
               <div className="mt-2 w-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold p-1.5 rounded-lg text-left">
                 👶 <strong>Menor de edad</strong>
@@ -400,7 +396,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                   {subTab === 'historia' && (
                     <div className="space-y-6">
                       
-                      {/* SIGNOS VITALES CON TEMPERATURA */}
+                      {/* SIGNOS VITALES */}
                       <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
                         <span className="text-[11px] font-black text-slate-700 uppercase tracking-wider block mb-2">
                           🩺 Signos Vitales de la Consulta
@@ -449,7 +445,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                         </div>
                       </div>
 
-                      {/* HISTORIA CLÍNICA */}
+                      {/* BLOQUE 1: HISTORIA CLÍNICA */}
                       <div>
                         <h4 className="text-xs font-black text-slate-800 uppercase border-b border-slate-200 pb-2 mb-3">Historia Clínica</h4>
                         <div className="space-y-3">
@@ -468,22 +464,31 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                         </div>
                       </div>
 
-                      {/* EXAMEN Y DIAGNÓSTICO */}
+                      {/* BLOQUE 2: EXAMEN Y DIAGNÓSTICO (CON REPORTE DE EXÁMENES) */}
                       <div>
-                        <h4 className="text-xs font-black text-slate-800 uppercase border-b border-slate-200 pb-2 mb-3">Diagnóstico y Plan</h4>
+                        <h4 className="text-xs font-black text-slate-800 uppercase border-b border-slate-200 pb-2 mb-3">Examen y Diagnóstico</h4>
                         <div className="space-y-3">
                           <div>
                             <label className="text-xs font-bold text-slate-700 block mb-1">Examen físico</label>
-                            <textarea rows="2" placeholder="Examen físico..." value={formConsulta.examen_fisico} onChange={(e) => setFormConsulta({ ...formConsulta, examen_fisico: e.target.value })} className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500" />
+                            <textarea rows="3" placeholder="Examen físico..." value={formConsulta.examen_fisico} onChange={(e) => setFormConsulta({ ...formConsulta, examen_fisico: e.target.value })} className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500" />
+                          </div>
+                          <div>
+                            <label className="text-xs font-bold text-slate-700 block mb-1">Reporte de exámenes</label>
+                            <textarea rows="2" placeholder="Reporte de exámenes previos o de laboratorio..." value={formConsulta.reporte_examenes} onChange={(e) => setFormConsulta({ ...formConsulta, reporte_examenes: e.target.value })} className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500" />
                           </div>
                           <div>
                             <label className="text-xs font-bold text-slate-700 block mb-1">Impresión diagnóstica</label>
                             <input type="text" placeholder="Impresión diagnóstica..." value={formConsulta.diagnostico} onChange={(e) => setFormConsulta({ ...formConsulta, diagnostico: e.target.value })} className="w-full bg-white border-2 border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 outline-none focus:border-blue-600" />
                           </div>
-                          <div>
-                            <label className="text-xs font-bold text-slate-700 block mb-1">Plan de manejo</label>
-                            <textarea rows="3" placeholder="Plan de manejo..." value={formConsulta.plan_tratamiento} onChange={(e) => setFormConsulta({ ...formConsulta, plan_tratamiento: e.target.value })} className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500" />
-                          </div>
+                        </div>
+                      </div>
+
+                      {/* BLOQUE 3: PLAN */}
+                      <div>
+                        <h4 className="text-xs font-black text-slate-800 uppercase border-b border-slate-200 pb-2 mb-3">Plan</h4>
+                        <div>
+                          <label className="text-xs font-bold text-slate-700 block mb-1">Plan de manejo</label>
+                          <textarea rows="3" placeholder="Plan de manejo..." value={formConsulta.plan_tratamiento} onChange={(e) => setFormConsulta({ ...formConsulta, plan_tratamiento: e.target.value })} className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500" />
                         </div>
                       </div>
 
@@ -524,7 +529,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
               ) : (
                 consultaSeleccionada ? (
                   <div className="space-y-4">
-                    {/* 👇 AQUÍ ESTÁN DE VUELTA LOS BOTONES DE EDITAR Y ELIMINAR */}
+                    {/* BOTONES DE EDICIÓN Y ELIMINACIÓN */}
                     <div className="flex flex-wrap justify-end gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
                       <button 
                         type="button"
@@ -552,26 +557,61 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                           </div>
                         </div>
 
-                        {/* SIGNOS VITALES REGISTRADOS */}
+                        {/* SIGNOS VITALES */}
                         <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100 flex flex-wrap gap-4 text-xs text-slate-700">
                           <div><span className="font-bold text-blue-900">Peso:</span> {consultaSeleccionada.peso || '---'}</div>
                           <div><span className="font-bold text-blue-900">Talla:</span> {consultaSeleccionada.talla || '---'}</div>
                           <div><span className="font-bold text-rose-600">🌡️ Temp:</span> {consultaSeleccionada.temperatura || '---'}</div>
                           <div><span className="font-bold text-blue-900">P.A.:</span> {consultaSeleccionada.presion_arterial || '---'}</div>
                         </div>
-                        
+
+                        {/* HISTORIA CLÍNICA */}
                         <div>
-                          <span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Motivo de consulta</span>
-                          <p className="text-xs text-slate-800 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.motivo_consulta || 'N/D'}</p>
+                          <h4 className="text-xs font-black text-slate-800 uppercase border-b border-slate-100 pb-1 mb-2">Historia Clínica</h4>
+                          <div className="space-y-3">
+                            <div>
+                              <span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Motivo de consulta</span>
+                              <p className="text-xs text-slate-800 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.motivo_consulta || 'N/D'}</p>
+                            </div>
+                            <div>
+                              <span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Presente enfermedad</span>
+                              <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.enfermedad_actual || 'N/D'}</p>
+                            </div>
+                            <div>
+                              <span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Otros antecedentes</span>
+                              <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.antecedentes_patologicos || 'N/D'}</p>
+                            </div>
+                          </div>
                         </div>
+
+                        {/* EXAMEN Y DIAGNÓSTICO (INCLUYE REPORTE DE EXÁMENES) */}
                         <div>
-                          <span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Diagnóstico</span>
-                          <p className="text-xs font-bold text-blue-900 bg-blue-50/70 p-2.5 rounded-xl border border-blue-100">{consultaSeleccionada.diagnostico || 'N/D'}</p>
+                          <h4 className="text-xs font-black text-slate-800 uppercase border-b border-slate-100 pb-1 mb-2">Examen y Diagnóstico</h4>
+                          <div className="space-y-3">
+                            <div>
+                              <span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Examen físico</span>
+                              <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.examen_fisico || 'N/D'}</p>
+                            </div>
+                            <div>
+                              <span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Reporte de exámenes</span>
+                              <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.reporte_examenes || 'N/D'}</p>
+                            </div>
+                            <div>
+                              <span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Impresión diagnóstica</span>
+                              <p className="text-xs font-bold text-blue-900 bg-blue-50/70 p-2.5 rounded-xl border border-blue-100">{consultaSeleccionada.diagnostico || 'N/D'}</p>
+                            </div>
+                          </div>
                         </div>
+
+                        {/* PLAN */}
                         <div>
-                          <span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Plan de manejo</span>
-                          <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.plan_tratamiento || 'N/D'}</p>
+                          <h4 className="text-xs font-black text-slate-800 uppercase border-b border-slate-100 pb-1 mb-2">Plan</h4>
+                          <div>
+                            <span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Plan de manejo</span>
+                            <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.plan_tratamiento || 'N/D'}</p>
+                          </div>
                         </div>
+
                       </div>
                     )}
 
@@ -604,7 +644,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
               )
             )}
 
-            {/* SECCIÓN GENERAL: EDAD INTERCAMBIABLE Y SECCIÓN TUTOR */}
+            {/* SECCIÓN GENERAL: FICHA, EDAD Y TUTOR */}
             {seccionActiva === 'general' && (
               <form onSubmit={handleGuardarGeneral} className="space-y-4 max-w-2xl">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -618,7 +658,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                   </div>
                 </div>
                 
-                {/* FECHA DE NACIMIENTO Y EDAD VINCULADAS EN AMBAS DIRECCIONES */}
+                {/* FECHA Y EDAD VINCULADAS */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-3 rounded-xl border border-slate-200">
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1">Fecha de Nacimiento</label>
@@ -653,7 +693,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                   </div>
                 </div>
 
-                {/* SECCIÓN OBLIGATORIA / DESPLEGABLE SI ES MENOR DE EDAD */}
+                {/* MENOR DE EDAD / RESPONSABLE */}
                 {esMenorDeEdad && (
                   <div className="bg-amber-50/70 border-2 border-amber-300 p-4 rounded-2xl space-y-3 transition-all animate-fadeIn">
                     <div className="flex items-center gap-2">
@@ -725,7 +765,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
 
         {/* COLUMNA DERECHA: HISTORIAL */}
         <aside className="w-72 bg-slate-50 flex flex-col shrink-0 overflow-y-auto p-4 space-y-4 border-l border-slate-200">
-          <button onClick={() => { setModoCrear(true); setModoEditar(false); setSeccionActiva('inicio'); setSubTab('historia'); setFormConsulta({ doctor_nombre: 'Dra. Liseyda Maye', motivo_consulta: '', enfermedad_actual: '', antecedentes_patologicos: '', examen_fisico: '', reporte_examenes: '', diagnostico: '', plan_tratamiento: '', peso: '', talla: '', temperatura: '', presion_arterial: '' }); setMedicamentos([{ medicamento: '', frecuencia: 'Cada 8 horas', dias_tratamiento: 5, indicacion: '' }]); }} className="w-full bg-[#10a37f] hover:bg-emerald-700 text-white font-bold text-xs p-2.5 rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
+          <button onClick={() => { setModoCrear(true); setModoEditar(false); setSeccionActiva('inicio'); setSubTab('historia'); setFormConsulta({ doctor_nombre: 'Dra. Liseyda Maye', motivo_consulta: '', enfermedad_actual: '', antecedentes_patologicos: '', examen_fisico: '', reporte_examenes: '', diagnostico: '', plan_tratamiento: '', peso: '', talla: '', temperatura: '', presion_arterial: '' }); setMedicamentos([{ medicamento: '', frecuencia: 'Cada 8 horas', dias_tratamiento: 5, indicacion: '' }]); setEstudiosNuevos([{ tipo_estudio: '', laboratorio: '', observaciones: '' }]); }} className="w-full bg-[#10a37f] hover:bg-emerald-700 text-white font-bold text-xs p-2.5 rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
             ➕ Nueva Consulta
           </button>
           
