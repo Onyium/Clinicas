@@ -163,15 +163,33 @@ app.post('/api/citas', async (req, res) => {
   const usuarioId = req.headers['x-usuario-id'] || 1;
   const { paciente_id, paciente_nombre, paciente_telefono, doctor_id, doctor_nombre, fecha_cita, hora_cita, duracion_minutos, indicaciones, estado } = req.body;
   
+  // En tu POST /api/citas:
   try {
+    // 1. Guardar la cita en la base de datos primero
     const [result] = await pool.query(
-      `INSERT INTO citas (usuario_id, paciente_id, paciente_nombre, paciente_telefono, doctor_id, doctor_nombre, fecha_cita, hora_cita, duracion_minutos, indicaciones, estado)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [usuarioId, paciente_id, paciente_nombre, paciente_telefono, doctor_id, doctor_nombre, fecha_cita, hora_cita, duracion_minutos || 30, indicaciones, estado || 'RESERVADA']
+      `INSERT INTO citas (paciente_nombre, telefono, doctor_nombre, fecha, hora, duracion, notas)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [nombre, telefono, doctor, fecha, hora, duracion, notas]
     );
-    res.json({ ok: true, id: result.insertId });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+
+    // 2. Responderle de inmediato al frontend para que NO dé error
+    res.json({ ok: true, id: result.insertId, mensaje: 'Cita guardada' });
+
+    // 3. El WhatsApp se envía en segundo plano sin tumbar la cita si falla
+    try {
+      if (sock && sock.user) {
+        const jid = `503${telefono.replace(/[^0-9]/g, '')}@s.whatsapp.net`;
+        await sock.sendMessage(jid, { 
+          text: `Hola ${nombre}, su cita con ${doctor} está confirmada para el ${fecha} a las ${hora}.` 
+        });
+      }
+    } catch (waErr) {
+      console.error('No se pudo enviar WhatsApp (pero la cita sí se guardó):', waErr.message);
+    }
+
+  } catch (dbErr) {
+    console.error('Error en base de datos:', dbErr);
+    res.status(500).json({ error: dbErr.message });
   }
 });
 
