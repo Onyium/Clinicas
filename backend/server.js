@@ -161,34 +161,76 @@ app.get('/api/citas', async (req, res) => {
 
 app.post('/api/citas', async (req, res) => {
   const usuarioId = req.headers['x-usuario-id'] || 1;
-  const { paciente_id, paciente_nombre, paciente_telefono, doctor_id, doctor_nombre, fecha_cita, hora_cita, duracion_minutos, indicaciones, estado } = req.body;
-  
-  // En tu POST /api/citas:
+  const { 
+    paciente_id, 
+    paciente_nombre, 
+    paciente_telefono, 
+    doctor_id, 
+    doctor_nombre, 
+    fecha_cita, 
+    hora_cita, 
+    duracion_minutos, 
+    indicaciones, 
+    estado 
+  } = req.body;
+
+  const duracion = parseInt(duracion_minutos, 10) || 30;
+  const horaFin = hora_cita ? calcularHoraFin(hora_cita, duracion) : null;
+  const estadoFinal = estado || 'CONFIRMADA';
+
   try {
-    // 1. Guardar la cita en la base de datos primero
+    // 1. Guardar limpiamente en la base de datos con las variables y columnas correctas
     const [result] = await pool.query(
-      `INSERT INTO citas (paciente_nombre, telefono, doctor_nombre, fecha, hora, duracion, notas)
-      VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [nombre, telefono, doctor, fecha, hora, duracion, notas]
+      `INSERT INTO citas (
+        usuario_id, paciente_id, paciente_nombre, paciente_telefono, 
+        doctor_id, doctor_nombre, fecha_cita, hora_cita, 
+        duracion_minutos, hora_fin, indicaciones, estado
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        usuarioId,
+        paciente_id || null,
+        paciente_nombre || 'Paciente',
+        paciente_telefono || '',
+        doctor_id || null,
+        doctor_nombre || 'Dra. Liseyda Maye',
+        fecha_cita,
+        hora_cita,
+        duracion,
+        horaFin,
+        indicaciones || null,
+        estadoFinal
+      ]
     );
 
-    // 2. Responderle de inmediato al frontend para que NO dé error
-    res.json({ ok: true, id: result.insertId, mensaje: 'Cita guardada' });
+    const nuevaCitaId = result.insertId;
 
-    // 3. El WhatsApp se envía en segundo plano sin tumbar la cita si falla
-    try {
-      if (sock && sock.user) {
-        const jid = `503${telefono.replace(/[^0-9]/g, '')}@s.whatsapp.net`;
-        await sock.sendMessage(jid, { 
-          text: `Hola ${nombre}, su cita con ${doctor} está confirmada para el ${fecha} a las ${hora}.` 
-        });
+    // 2. Responderle de inmediato al frontend con éxito (para que cierre el modal sin trabarse)
+    res.json({ 
+      ok: true, 
+      id: nuevaCitaId, 
+      mensaje: 'Cita guardada correctamente' 
+    });
+
+    // 3. WhatsApp en segundo plano con tu función modular (sin tumbar la cita si no hay conexión)
+    setImmediate(async () => {
+      try {
+        if (typeof enviarMensajeReserva === 'function' && paciente_telefono) {
+          await enviarMensajeReserva({
+            paciente_nombre,
+            paciente_telefono,
+            doctor_nombre: doctor_nombre || 'Dra. Liseyda Maye',
+            fecha_cita,
+            hora_cita
+          });
+          console.log(`✅ [WhatsApp Cita] Notificación enviada a ${paciente_nombre}`);
+        }
+      } catch (waErr) {
+        console.error('⚠️ [WhatsApp Cita Error Background]:', waErr.message);
       }
-    } catch (waErr) {
-      console.error('No se pudo enviar WhatsApp (pero la cita sí se guardó):', waErr.message);
-    }
+    });
 
   } catch (dbErr) {
-    console.error('Error en base de datos:', dbErr);
+    console.error('❌ Error guardando cita en MySQL:', dbErr);
     res.status(500).json({ error: dbErr.message });
   }
 });
