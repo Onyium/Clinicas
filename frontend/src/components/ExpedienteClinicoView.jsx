@@ -58,7 +58,6 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
   const [mostrarModalEstudio, setMostrarModalEstudio] = useState(false);
   const [formEstudioRapido, setFormEstudioRapido] = useState({ tipo_estudio: '', laboratorio: '', observaciones: '' });
 
-  // Ficha general con edad y campos de tutor/responsable
   const [formGeneral, setFormGeneral] = useState({
     nombre: '', telefono: '', fecha_nacimiento: '', edad: '', sexo: 'Otro', alergias: '',
     antecedentes: '', contacto_emergencia: '', telefono_emergencia: '', foto_url: '',
@@ -77,7 +76,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
       const p = res.data?.paciente;
       if (p) {
         const fechaNac = p.fecha_nacimiento ? p.fecha_nacimiento.slice(0, 10) : '';
-        const edadCalc = p.edad !== undefined && p.edad !== null ? p.edad : calcularEdadDesdeFecha(fechaNac);
+        const edadCalc = p.edad !== undefined && p.edad !== null && p.edad !== '' ? p.edad : calcularEdadDesdeFecha(fechaNac);
         
         setFormGeneral({
           nombre: p.nombre || '', 
@@ -113,7 +112,6 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
 
   useEffect(() => { cargarExpediente(); }, [pacienteId]);
 
-  // Manejo bidireccional Fecha <-> Edad
   const handleCambioFechaNac = (e) => {
     const nuevaFecha = e.target.value;
     const nuevaEdad = calcularEdadDesdeFecha(nuevaFecha);
@@ -194,6 +192,83 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
     } finally {
       setGuardando(false);
     }
+  };
+
+  const handleAgregarEstudioRapido = async (e) => {
+    e.preventDefault();
+    if (!consultaSeleccionada) return;
+    try {
+      await api.post(`/api/estudios-clinicos`, { consulta_id: consultaSeleccionada.id, paciente_id: pacienteId, ...formEstudioRapido });
+      alert('✅ Estudio clínico agregado con éxito.');
+      setFormEstudioRapido({ tipo_estudio: '', laboratorio: '', observaciones: '' });
+      setMostrarModalEstudio(false);
+      await cargarExpediente();
+    } catch (err) { alert('Error al agregar estudio clínico'); }
+  };
+
+  const handleEliminarEstudio = async (estudioId) => {
+    if (!window.confirm('¿Desea eliminar este estudio clínico?')) return;
+    try { await api.delete(`/api/estudios-clinicos/${estudioId}`); await cargarExpediente(); } catch (err) { alert('Error al eliminar estudio'); }
+  };
+
+  const handleEliminarConsulta = async () => {
+    if (!consultaSeleccionada) return;
+    if (!window.confirm('¿Estás seguro de eliminar esta consulta, sus recetas y estudios asociados? Esta acción no se puede deshacer.')) return;
+    try {
+      await api.delete(`/api/consultas-independientes/${consultaSeleccionada.id}`);
+      alert('🗑️ Consulta eliminada con éxito.');
+      setConsultaSeleccionada(null);
+      await cargarExpediente();
+    } catch (err) { alert('Error al eliminar la consulta'); }
+  };
+
+  const handleEliminarExpediente = async () => {
+    if (!window.confirm('⚠️ ¿Estás COMPLETAMENTE SEGURO de eliminar este expediente? Se borrarán todas sus consultas, recetas, estudios y citas asociadas.')) return;
+    try { await api.delete(`/api/pacientes/${pacienteId}`); alert('🗑️ Expediente eliminado.'); onVolver(); } catch (err) { alert('Error al eliminar el expediente.'); }
+  };
+
+  const activarModoEdicion = () => {
+    if (!consultaSeleccionada) return;
+    setFormConsulta({
+      doctor_nombre: consultaSeleccionada.doctor_nombre || 'Dra. Liseyda Maye', 
+      motivo_consulta: consultaSeleccionada.motivo_consulta || '',
+      enfermedad_actual: consultaSeleccionada.enfermedad_actual || '', 
+      antecedentes_patologicos: consultaSeleccionada.antecedentes_patologicos || '', 
+      examen_fisico: consultaSeleccionada.examen_fisico || '',
+      reporte_examenes: consultaSeleccionada.reporte_examenes || '',
+      diagnostico: consultaSeleccionada.diagnostico || '', 
+      plan_tratamiento: consultaSeleccionada.plan_tratamiento || '',
+      peso: consultaSeleccionada.peso || '',
+      talla: consultaSeleccionada.talla || '',
+      temperatura: consultaSeleccionada.temperatura || '',
+      presion_arterial: consultaSeleccionada.presion_arterial || ''
+    });
+
+    const recs = tratamientos.filter(t => t.consulta_id === consultaSeleccionada.id);
+    if (recs.length > 0) {
+      setMedicamentos(recs.map(r => ({ 
+        medicamento: r.medicamento || '', 
+        frecuencia: r.dosis_indicacion || 'Cada 8 horas', 
+        dias_tratamiento: r.dias_tratamiento || 5, 
+        indicacion: '' 
+      })));
+    } else { 
+      setMedicamentos([{ medicamento: '', frecuencia: 'Cada 8 horas', dias_tratamiento: 5, indicacion: '' }]); 
+    }
+
+    const ests = estudios.filter(e => e.consulta_id === consultaSeleccionada.id);
+    if (ests.length > 0) {
+      setEstudiosNuevos(ests.map(e => ({
+        tipo_estudio: e.tipo_estudio || '',
+        laboratorio: e.laboratorio || '',
+        observaciones: e.observaciones || ''
+      })));
+    } else {
+      setEstudiosNuevos([{ tipo_estudio: '', laboratorio: '', observaciones: '' }]);
+    }
+
+    setModoEditar(true);
+    setModoCrear(false);
   };
 
   const handleGuardarGeneral = async (e) => {
@@ -386,6 +461,10 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                             <label className="text-xs font-bold text-slate-700 block mb-1">Presente enfermedad</label>
                             <textarea rows="3" placeholder="Presente enfermedad..." value={formConsulta.enfermedad_actual} onChange={(e) => setFormConsulta({ ...formConsulta, enfermedad_actual: e.target.value })} className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500" />
                           </div>
+                          <div>
+                            <label className="text-xs font-bold text-slate-700 block mb-1">Otros antecedentes</label>
+                            <textarea rows="2" placeholder="Otros antecedentes..." value={formConsulta.antecedentes_patologicos} onChange={(e) => setFormConsulta({ ...formConsulta, antecedentes_patologicos: e.target.value })} className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500" />
+                          </div>
                         </div>
                       </div>
 
@@ -393,6 +472,10 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                       <div>
                         <h4 className="text-xs font-black text-slate-800 uppercase border-b border-slate-200 pb-2 mb-3">Diagnóstico y Plan</h4>
                         <div className="space-y-3">
+                          <div>
+                            <label className="text-xs font-bold text-slate-700 block mb-1">Examen físico</label>
+                            <textarea rows="2" placeholder="Examen físico..." value={formConsulta.examen_fisico} onChange={(e) => setFormConsulta({ ...formConsulta, examen_fisico: e.target.value })} className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500" />
+                          </div>
                           <div>
                             <label className="text-xs font-bold text-slate-700 block mb-1">Impresión diagnóstica</label>
                             <input type="text" placeholder="Impresión diagnóstica..." value={formConsulta.diagnostico} onChange={(e) => setFormConsulta({ ...formConsulta, diagnostico: e.target.value })} className="w-full bg-white border-2 border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 outline-none focus:border-blue-600" />
@@ -433,13 +516,32 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                       eliminarEstudioNuevo={eliminarEstudioNuevo} 
                       estudiosDeConsulta={estudiosDeConsulta} 
                       setMostrarModalEstudio={setMostrarModalEstudio} 
+                      handleEliminarEstudio={handleEliminarEstudio}
                       onRecargar={cargarExpediente}
                     />
                   )}
                 </form>
               ) : (
-                consultaSeleccionada && (
-                  <div>
+                consultaSeleccionada ? (
+                  <div className="space-y-4">
+                    {/* 👇 AQUÍ ESTÁN DE VUELTA LOS BOTONES DE EDITAR Y ELIMINAR */}
+                    <div className="flex flex-wrap justify-end gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                      <button 
+                        type="button"
+                        onClick={activarModoEdicion} 
+                        className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      >
+                        ✏️ Editar Consulta
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={handleEliminarConsulta} 
+                        className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      >
+                        🗑️ Eliminar Consulta
+                      </button>
+                    </div>
+
                     {subTab === 'historia' && (
                       <div className="border border-slate-200 rounded-2xl p-5 space-y-6 bg-white shadow-2xs">
                         <div className="border-b pb-3 flex justify-between items-center">
@@ -466,8 +568,13 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                           <span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Diagnóstico</span>
                           <p className="text-xs font-bold text-blue-900 bg-blue-50/70 p-2.5 rounded-xl border border-blue-100">{consultaSeleccionada.diagnostico || 'N/D'}</p>
                         </div>
+                        <div>
+                          <span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Plan de manejo</span>
+                          <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.plan_tratamiento || 'N/D'}</p>
+                        </div>
                       </div>
                     )}
+
                     {subTab === 'receta' && (
                       <RecetaTab 
                         modoCrear={false} 
@@ -477,7 +584,22 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                         recetasDeConsulta={recetasDeConsulta} 
                       />
                     )}
+
+                    {subTab === 'laboratorio' && (
+                      <LaboratorioTab 
+                        modoCrear={false} 
+                        modoEditar={false} 
+                        paciente={paciente} 
+                        consultaSeleccionada={consultaSeleccionada} 
+                        estudiosDeConsulta={estudiosDeConsulta} 
+                        setMostrarModalEstudio={setMostrarModalEstudio} 
+                        handleEliminarEstudio={handleEliminarEstudio} 
+                        onRecargar={cargarExpediente}
+                      />
+                    )}
                   </div>
+                ) : (
+                  <div className="text-center py-16 text-slate-400 text-xs">Selecciona una atención del historial o crea una nueva.</div>
                 )
               )
             )}
