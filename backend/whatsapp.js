@@ -340,31 +340,68 @@ export async function connectToWhatsApp() {
 
 // Envío al registrar por primera vez
 export async function enviarMensajeReserva(cita) {
-  if (!sock) return;
-  const digitos = String(cita.paciente_telefono).replace(/\D/g, '');
-  const telefonoCompleto = digitos.length === 8 ? `503${digitos}` : digitos;
-  const jid = `${telefonoCompleto}@s.whatsapp.net`;
-  const fechaStr = cita.fecha_cita.toString().split('T')[0];
+  if (!sock) {
+    console.warn('⚠️ [WhatsApp] Socket no conectado al intentar enviar reserva.');
+    return;
+  }
 
-  const mensaje = 
-`Hola *${cita.paciente_nombre}*, le saludamos de la clínica.
+  try {
+    const telRaw = cita.paciente_telefono || cita.telefono || '';
+    const digitos = String(telRaw).replace(/\D/g, '');
+    
+    if (digitos.length < 8) {
+      console.warn(`⚠️ [WhatsApp Cita] Teléfono inválido o muy corto: "${telRaw}"`);
+      return;
+    }
+
+    const telefonoCompleto = digitos.length === 8 ? `503${digitos}` : digitos;
+    const jid = `${telefonoCompleto}@s.whatsapp.net`;
+
+    // Formateo seguro de fecha
+    const fechaStr = cita.fecha_cita 
+      ? String(cita.fecha_cita).split('T')[0] 
+      : (cita.fecha ? String(cita.fecha).split('T')[0] : 'Fecha asignada');
+
+    // Manejo a prueba de fallos de hora de inicio y fin (sin riesgo de error por slice)
+    const hInicio = cita.hora_cita ? String(cita.hora_cita).slice(0, 5) : '08:00';
+    let hFin = '';
+    if (cita.hora_fin) {
+      hFin = ` - ${String(cita.hora_fin).slice(0, 5)}`;
+    }
+
+    const paciente = cita.paciente_nombre || cita.nombre || 'Paciente';
+    const doctor = cita.doctor_nombre || cita.doctor || 'Dra. Liseyda Maye';
+    const indicaciones = cita.indicaciones || cita.notas || '';
+
+    const mensaje = 
+`Hola *${paciente}*, le saludamos de su consultorio médico.
 
 Le confirmamos que su cita médica ha quedado agendada:
 📅 *Fecha:* ${fechaStr}
-⏰ *Horario:* ${cita.hora_cita.slice(0, 5)} - ${cita.hora_fin.slice(0, 5)}
-👨‍⚕️ *Doctor(a):* ${cita.doctor_nombre}
-${cita.indicaciones ? `📌 *Indicaciones:* ${cita.indicaciones}\n` : ''}
-Puede escribir *"cita"* en cualquier momento para revisar esta información o *"reagendar"* para solicitar un cambio.
+⏰ *Horario:* ${hInicio}${hFin}
+👨‍⚕️ *Doctor(a):* ${doctor}
+${indicaciones ? `📌 *Indicaciones:* ${indicaciones}\n` : ''}
+Puede escribir *"cita"* en cualquier momento para revisar esta información o *"reagendar"* para solicitar un cambio de horario.
 
 Por favor responda a este mensaje con:
 *1* para Confirmar asistencia
 *2* para Cancelar o Reagendar`;
 
-  try {
+    console.log(`📤 Enviando confirmación de cita a ${jid}...`);
     await sock.sendMessage(jid, { text: mensaje });
-    await pool.query('UPDATE citas SET mensaje_bienvenida_enviado = TRUE WHERE id = ?', [cita.id]);
+    console.log(`✅ [WhatsApp Cita] Confirmación entregada con éxito a ${paciente}`);
+
+    // Intentar actualizar en base de datos si existe el campo
+    try {
+      if (cita.id) {
+        await pool.query('UPDATE citas SET mensaje_bienvenida_enviado = TRUE WHERE id = ?', [cita.id]);
+      }
+    } catch (ignoreErr) {
+      // Si la columna mensaje_bienvenida_enviado no existe, se ignora silenciosamente
+    }
+
   } catch (error) {
-    console.error(`Error enviando mensaje:`, error);
+    console.error(`❌ Error en enviarMensajeReserva:`, error.message || error);
   }
 }
 
