@@ -179,7 +179,6 @@ app.post('/api/citas', async (req, res) => {
   const estadoFinal = estado || 'CONFIRMADA';
 
   try {
-    // 1. Guardar limpiamente en la base de datos con las variables y columnas correctas
     const [result] = await pool.query(
       `INSERT INTO citas (
         usuario_id, paciente_id, paciente_nombre, paciente_telefono, 
@@ -204,28 +203,36 @@ app.post('/api/citas', async (req, res) => {
 
     const nuevaCitaId = result.insertId;
 
-    // 2. Responderle de inmediato al frontend con éxito (para que cierre el modal sin trabarse)
     res.json({ 
       ok: true, 
       id: nuevaCitaId, 
       mensaje: 'Cita guardada correctamente' 
     });
 
-    // 3. WhatsApp en segundo plano con tu función modular (sin tumbar la cita si no hay conexión)
     setImmediate(async () => {
       try {
         if (typeof enviarMensajeReserva === 'function' && paciente_telefono) {
           await enviarMensajeReserva({
+            id: nuevaCitaId,
+            cita_id: nuevaCitaId,
             paciente_nombre,
+            nombre: paciente_nombre,
             paciente_telefono,
+            telefono: paciente_telefono,
             doctor_nombre: doctor_nombre || 'Dra. Liseyda Maye',
+            doctor: doctor_nombre || 'Dra. Liseyda Maye',
             fecha_cita,
-            hora_cita
+            fecha: fecha_cita,
+            hora_cita,
+            hora: hora_cita,
+            indicaciones: indicaciones || ''
           });
           console.log(`✅ [WhatsApp Cita] Notificación enviada a ${paciente_nombre}`);
+        } else {
+          console.warn('⚠️ No se envió WhatsApp: teléfono no proporcionado o función no disponible.');
         }
       } catch (waErr) {
-        console.error('⚠️ [WhatsApp Cita Error Background]:', waErr.message);
+        console.error('❌ [WhatsApp Cita Error Background]:', waErr.message || waErr);
       }
     });
 
