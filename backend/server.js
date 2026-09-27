@@ -19,6 +19,20 @@ dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
+const cloudinary = require('cloudinary').v2;
+const multer = require('multer');
+const os = require('os');
+const fs = require('fs');
+
+// Configuración de Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Usar el directorio temporal del sistema para no tener problemas en producción
+const upload = multer({ dest: os.tmpdir() });
 
 connectToWhatsApp();
 
@@ -26,6 +40,27 @@ connectToWhatsApp();
 cron.schedule('0 9 * * *', () => {
   console.log('⏰ [Cron] Ejecutando recordatorios automáticos...');
   procesarRecordatoriosManana();
+});
+
+// Endpoint para subir el logo
+app.post('/api/upload-logo', upload.single('logo'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No se envió ninguna imagen' });
+
+    // Subir a Cloudinary
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: 'clinica_logos', // Crea una carpeta organizada en tu Cloudinary
+    });
+
+    // Borrar el archivo temporal del servidor local
+    fs.unlinkSync(req.file.path);
+
+    // Devolver la URL segura que nos da Cloudinary
+    res.json({ url: result.secure_url });
+  } catch (error) {
+    console.error('Error subiendo logo:', error);
+    res.status(500).json({ error: 'Error al subir la imagen a Cloudinary' });
+  }
 });
 
 // Función utilitaria para calcular hora de fin
@@ -526,83 +561,64 @@ app.post('/api/consultas-independientes', async (req, res) => {
   }
 });
 
-app.put('/api/consultas-independientes/:id', async (req, res) => {
-  const { id } = req.params;
-  const {
-    doctor_nombre,
-    motivo_consulta,
-    enfermedad_actual,
-    antecedentes_patologicos,
-    examen_fisico,
-    reporte_examenes,
-    diagnostico,
-    plan_tratamiento,
-    peso,
-    talla,
-    temperatura,
-    presion_arterial,
-    medicamentos
+// ==========================================
+// CONFIGURACIÓN DE LA CLÍNICA
+// ==========================================
+app.put('/api/configuracion', async (req, res) => {
+  const { 
+    nombre_clinica, 
+    eslogan, 
+    telefono_clinica, 
+    direccion, 
+    logo_url, 
+    hora_apertura, 
+    hora_cierre, 
+    duracion_defecto_minutos,
+    jvpm,
+    horario_atencion,
+    nombre_doctor
   } = req.body;
 
   try {
-    await pool.query(
-      `UPDATE consultas_medicas 
-       SET doctor_nombre = COALESCE(?, doctor_nombre), motivo_consulta = ?, enfermedad_actual = ?, antecedentes_patologicos = ?, 
-           examen_fisico = ?, reporte_examenes = ?, diagnostico = ?, plan_tratamiento = ?,
-           peso = ?, talla = ?, temperatura = ?, presion_arterial = ?
-       WHERE id = ?`,
-      [
-        doctor_nombre || null,
-        motivo_consulta || null,
-        enfermedad_actual || null,
-        antecedentes_patologicos || null,
-        examen_fisico || null,
-        reporte_examenes || null,
-        diagnostico || null,
-        plan_tratamiento || null,
-        peso || null,
-        talla || null,
-        temperatura || null,
-        presion_arterial || null,
-        id
-      ]
-    );
+    await pool.query(`
+      INSERT INTO configuracion (
+        id, nombre_clinica, eslogan, telefono_clinica, direccion, logo_url, 
+        hora_apertura, hora_cierre, duracion_defecto_minutos, jvpm, horario_atencion, nombre_doctor
+      ) VALUES (
+        1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+      )
+      ON DUPLICATE KEY UPDATE
+        nombre_clinica = VALUES(nombre_clinica),
+        eslogan = VALUES(eslogan),
+        telefono_clinica = VALUES(telefono_clinica),
+        direccion = VALUES(direccion),
+        logo_url = VALUES(logo_url),
+        hora_apertura = VALUES(hora_apertura),
+        hora_cierre = VALUES(hora_cierre),
+        duracion_defecto_minutos = VALUES(duracion_defecto_minutos),
+        jvpm = VALUES(jvpm),
+        horario_atencion = VALUES(horario_atencion),
+        nombre_doctor = VALUES(nombre_doctor)
+    `, [
+      nombre_clinica || 'Consultorio Médico',
+      eslogan || null,
+      telefono_clinica || null,
+      direccion || null,
+      logo_url || null,
+      hora_apertura ? (hora_apertura.length === 5 ? `${hora_apertura}:00` : hora_apertura) : '08:00:00',
+      hora_cierre ? (hora_cierre.length === 5 ? `${hora_cierre}:00` : hora_cierre) : '17:00:00',
+      parseInt(duracion_defecto_minutos, 10) || 30,
+      jvpm || null,
+      horario_atencion || null,
+      nombre_doctor || null
+    ]);
 
-    if (Array.isArray(medicamentos)) {
-      await pool.query('DELETE FROM recetas_medicamentos WHERE consulta_id = ?', [id]);
-
-      const [conRows] = await pool.query('SELECT paciente_id FROM consultas_medicas WHERE id = ?', [id]);
-      const pacienteId = conRows[0]?.paciente_id;
-
-      if (pacienteId) {
-        const [pacRows] = await pool.query('SELECT nombre, telefono FROM pacientes WHERE id = ?', [pacienteId]);
-        const pac = pacRows[0] || {};
-
-        for (const m of medicamentos) {
-          const nombreMed = (m.medicamento || '').trim();
-          if (!nombreMed) continue;
-
-          const frecuencia = (m.frecuencia || '').trim();
-          const indicacion = (m.indicacion || '').trim();
-          const dosis = [frecuencia, indicacion].filter(Boolean).join(' - ') || 'Según indicación médica';
-          const dias = parseInt(m.dias_tratamiento, 10) || 5;
-
-          await pool.query(
-            `INSERT INTO recetas_medicamentos 
-             (consulta_id, paciente_id, paciente_nombre, paciente_telefono, medicamento, dosis_indicacion, fecha_inicio, dias_tratamiento, hora_recordatorio, activo)
-             VALUES (?, ?, ?, ?, ?, ?, CURDATE(), ?, '08:00:00', TRUE)`,
-            [id, pacienteId, pac.nombre || 'Paciente', pac.telefono || '', nombreMed, dosis, dias]
-          );
-        }
-      }
-    }
-
-    res.json({ ok: true, mensaje: 'Consulta y receta actualizadas con éxito' });
+    res.json({ ok: true, mensaje: 'Configuración guardada exitosamente' });
   } catch (err) {
-    console.error('Error al actualizar consulta:', err);
+    console.error('Error detallado en configuracion:', err);
     res.status(500).json({ error: err.message });
   }
-});
+});;
 
 app.delete('/api/consultas-independientes/:id', async (req, res) => {
   const { id } = req.params;

@@ -17,6 +17,7 @@ export default function ConfigModal({ isOpen, onClose, onSaved }) {
   });
 
   const [cargando, setCargando] = useState(false);
+  const [subiendoLogo, setSubiendoLogo] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -41,6 +42,29 @@ export default function ConfigModal({ isOpen, onClose, onSaved }) {
         .catch(err => console.error("Error al cargar configuracion:", err));
     }
   }, [isOpen]);
+
+  const handleSubirLogo = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('logo', file);
+
+    setSubiendoLogo(true);
+    try {
+      // Llamamos a nuestra nueva ruta en el backend
+      const res = await api.post('/api/upload-logo', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      // Actualizamos el estado con la URL de Cloudinary
+      setForm({ ...form, logo_url: res.data.url });
+    } catch (err) {
+      console.error(err);
+      alert('Error al subir la imagen al servidor.');
+    } finally {
+      setSubiendoLogo(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -110,14 +134,39 @@ export default function ConfigModal({ isOpen, onClose, onSaved }) {
               </div>
 
               <div className="md:col-span-2">
-                <label className="text-[11px] font-bold text-slate-600 uppercase block mb-1">Días y Horarios de Atención (Texto libre)</label>
+                <label className="text-[11px] font-bold text-slate-600 uppercase block mb-1">Días y Horarios de Atención</label>
                 <input type="text" placeholder="Ej. Lunes a Sábado de 8:00 AM - 4:00 PM" value={form.horario_atencion} onChange={e => setForm({...form, horario_atencion: e.target.value})} className="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:border-blue-500" />
               </div>
 
-              <div className="md:col-span-2">
-                <label className="text-[11px] font-bold text-slate-600 uppercase block mb-1">URL del Logo (Opcional)</label>
-                <input type="text" placeholder="https://imgur.com/tu-logo.png" value={form.logo_url} onChange={e => setForm({...form, logo_url: e.target.value})} className="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:border-blue-500 text-blue-600" />
+              {/* SECCIÓN DE SUBIDA DE IMAGEN A CLOUDINARY */}
+              <div className="md:col-span-2 bg-white p-3 border border-slate-200 rounded-xl">
+                <label className="text-[11px] font-bold text-slate-600 uppercase block mb-2">Logo de la Clínica</label>
+                <div className="flex items-center gap-4">
+                  {form.logo_url ? (
+                    <img src={form.logo_url} alt="Logo Clínica" className="w-16 h-16 object-contain border border-slate-200 rounded-lg bg-slate-50 p-1" />
+                  ) : (
+                    <div className="w-16 h-16 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-2xl">
+                      ⚕️
+                    </div>
+                  )}
+                  
+                  <div className="flex-1">
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={handleSubirLogo} 
+                      disabled={subiendoLogo}
+                      className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 outline-none cursor-pointer disabled:opacity-50" 
+                    />
+                    {subiendoLogo ? (
+                      <span className="text-xs text-blue-600 font-bold block mt-1.5 animate-pulse">⏳ Subiendo y procesando imagen...</span>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 block mt-1.5">Formatos permitidos: JPG, PNG, WEBP.</span>
+                    )}
+                  </div>
+                </div>
               </div>
+
             </div>
           </div>
 
@@ -154,7 +203,7 @@ export default function ConfigModal({ isOpen, onClose, onSaved }) {
             <button type="button" onClick={onClose} className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-sm transition cursor-pointer">
               Cancelar
             </button>
-            <button type="submit" disabled={cargando} className="px-6 py-2.5 bg-[#10a37f] hover:bg-emerald-700 text-white rounded-xl font-bold text-sm shadow-md transition cursor-pointer">
+            <button type="submit" disabled={cargando || subiendoLogo} className="px-6 py-2.5 bg-[#10a37f] hover:bg-emerald-700 text-white rounded-xl font-bold text-sm shadow-md transition cursor-pointer disabled:opacity-50">
               {cargando ? 'Guardando...' : '💾 Guardar Configuración'}
             </button>
           </div>
