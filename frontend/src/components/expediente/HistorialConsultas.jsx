@@ -1,9 +1,7 @@
 // src/components/expediente/HistorialConsultas.jsx
 import React from 'react';
 
-import SidebarPaciente from './expediente/SidebarPaciente';
-import FormularioGeneral from './expediente/FormularioGeneral';
-import HistorialConsultas from './expediente/HistorialConsultas';
+
 
 export default function HistorialConsultas({
   consultas,
