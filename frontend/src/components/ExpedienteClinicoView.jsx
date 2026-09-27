@@ -171,6 +171,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
       setModoCrear(false);
       setModoEditar(false);
       setSubTab('historia'); 
+      setEstudiosNuevos([{ tipo_estudio: '', laboratorio: '', observaciones: '' }]);
       await cargarExpediente();
     } catch (err) {
       console.error(err);
@@ -239,9 +240,14 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
 
     const ests = estudios.filter(e => e.consulta_id === consultaSeleccionada.id);
     if (ests.length > 0) {
-      setEstudiosNuevos(ests.map(e => ({ tipo_estudio: e.tipo_estudio || '', laboratorio: e.laboratorio || '', observaciones: e.observaciones || '' })));
-    } else {
-      setEstudiosNuevos([{ tipo_estudio: '', laboratorio: '', observaciones: '' }]);
+      setEstudiosNuevos(ests.map(e => ({ 
+        id: e.id, // 👈 ¡ESTE ES EL CANDADO! Conservar el ID original
+        tipo_estudio: e.tipo_estudio || '', 
+        laboratorio: e.laboratorio || '', 
+        observaciones: e.observaciones || '' 
+      })));
+    } else { 
+      setEstudiosNuevos([{ tipo_estudio: '', laboratorio: '', observaciones: '' }]); 
     }
 
     setModoEditar(true);
