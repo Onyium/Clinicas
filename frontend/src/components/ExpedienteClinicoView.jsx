@@ -289,6 +289,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
   const consultas = data?.consultas || [];
   const tratamientos = data?.tratamientos || [];
   const estudios = data?.estudios || [];
+  const citas = data?.citas || [];
   const recetasDeConsulta = consultaSeleccionada ? tratamientos.filter((t) => t.consulta_id === consultaSeleccionada.id) : [];
   const estudiosDeConsulta = consultaSeleccionada ? estudios.filter((e) => e.consulta_id === consultaSeleccionada.id) : [];
 
@@ -307,7 +308,6 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
         <button onClick={onVolver} className="bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 cursor-pointer">
           ← Volver al Catálogo
         </button>
-        
       </header>
 
       {/* ÁREA PRINCIPAL */}
@@ -358,6 +358,9 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
             <button onClick={() => { setSeccionActiva('inicio'); setModoCrear(false); setModoEditar(false); }} className={`w-full text-left px-3 py-2.5 rounded-xl transition ${seccionActiva === 'inicio' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}>
               🩺 Historial de Consultas
             </button>
+            <button onClick={() => setSeccionActiva('citas')} className={`w-full text-left px-3 py-2.5 rounded-xl transition ${seccionActiva === 'citas' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}>
+              📅 Citas Agendadas ({citas.length})
+            </button>
             <button onClick={() => setSeccionActiva('general')} className={`w-full text-left px-3 py-2.5 rounded-xl transition ${seccionActiva === 'general' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}>
               📋 Datos Generales / Ficha
             </button>
@@ -369,7 +372,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
           
           <div className="px-6 py-3 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
             <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">
-              {seccionActiva === 'general' ? 'Ficha y Antecedentes' : modoCrear ? '📝 Nueva Consulta' : modoEditar ? '✏️ Editando Consulta' : '🔍 Detalle de Consulta'}
+              {seccionActiva === 'general' ? 'Ficha y Antecedentes' : seccionActiva === 'citas' ? 'Agenda de Citas' : modoCrear ? '📝 Nueva Consulta' : modoEditar ? '✏️ Editando Consulta' : '🔍 Detalle de Consulta'}
             </h3>
             {seccionActiva === 'inicio' && (modoCrear || modoEditar) && (
               <div className="flex gap-2">
@@ -378,6 +381,15 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                   {guardando ? 'Guardando...' : '💾 Guardar Todo'}
                 </button>
               </div>
+            )}
+             {seccionActiva === 'citas' && (
+              <button 
+                type="button" 
+                onClick={() => onAgendarCita && onAgendarCita(paciente)}
+                className="bg-[#10a37f] hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+              >
+                📅 Agendar Nueva Cita
+              </button>
             )}
           </div>
 
@@ -391,6 +403,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
           )}
 
           <div className="p-6 flex-1">
+             {/* SECCIÓN 1: CONSULTAS Y EXPEDIENTE */}
             {seccionActiva === 'inicio' && (
               modoCrear || modoEditar ? (
                 <form id="form-consulta" onSubmit={handleGuardarConsulta} className="max-w-3xl">
@@ -471,7 +484,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                         <div className="space-y-3">
                           <div>
                             <label className="text-xs font-bold text-slate-700 block mb-1">Examen físico</label>
-                            <textarea rows="3" placeholder="Examen físico..." value={formConsulta.examen_fisico} onChange={(e) => setFormConsulta({ ...formConsulta, examen_fisico: e.target.value })} className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500" />
+                            <textarea rows="2" placeholder="Examen físico..." value={formConsulta.examen_fisico} onChange={(e) => setFormConsulta({ ...formConsulta, examen_fisico: e.target.value })} className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500" />
                           </div>
                           <div>
                             <label className="text-xs font-bold text-slate-700 block mb-1">Reporte de exámenes</label>
@@ -481,15 +494,10 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                             <label className="text-xs font-bold text-slate-700 block mb-1">Impresión diagnóstica</label>
                             <input type="text" placeholder="Impresión diagnóstica..." value={formConsulta.diagnostico} onChange={(e) => setFormConsulta({ ...formConsulta, diagnostico: e.target.value })} className="w-full bg-white border-2 border-slate-300 rounded-xl p-2.5 text-xs font-bold text-slate-800 outline-none focus:border-blue-600" />
                           </div>
-                        </div>
-                      </div>
-
-                      {/* BLOQUE 3: PLAN */}
-                      <div>
-                        <h4 className="text-xs font-black text-slate-800 uppercase border-b border-slate-200 pb-2 mb-3">Plan</h4>
-                        <div>
-                          <label className="text-xs font-bold text-slate-700 block mb-1">Plan de manejo</label>
-                          <textarea rows="3" placeholder="Plan de manejo..." value={formConsulta.plan_tratamiento} onChange={(e) => setFormConsulta({ ...formConsulta, plan_tratamiento: e.target.value })} className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500" />
+                          <div>
+                            <label className="text-xs font-bold text-slate-700 block mb-1">Plan de manejo</label>
+                            <textarea rows="3" placeholder="Plan de manejo..." value={formConsulta.plan_tratamiento} onChange={(e) => setFormConsulta({ ...formConsulta, plan_tratamiento: e.target.value })} className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500" />
+                          </div>
                         </div>
                       </div>
 
@@ -558,7 +566,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                           </div>
                         </div>
 
-                        {/* SIGNOS VITALES */}
+                        {/* SIGNOS VITALES REGISTRADOS */}
                         <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100 flex flex-wrap gap-4 text-xs text-slate-700">
                           <div><span className="font-bold text-blue-900">Peso:</span> {consultaSeleccionada.peso || '---'}</div>
                           <div><span className="font-bold text-blue-900">Talla:</span> {consultaSeleccionada.talla || '---'}</div>
@@ -585,7 +593,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                           </div>
                         </div>
 
-                        {/* EXAMEN Y DIAGNÓSTICO (INCLUYE REPORTE DE EXÁMENES) */}
+                        {/* EXAMEN Y DIAGNÓSTICO */}
                         <div>
                           <h4 className="text-xs font-black text-slate-800 uppercase border-b border-slate-100 pb-1 mb-2">Examen y Diagnóstico</h4>
                           <div className="space-y-3">
@@ -601,15 +609,10 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                               <span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Impresión diagnóstica</span>
                               <p className="text-xs font-bold text-blue-900 bg-blue-50/70 p-2.5 rounded-xl border border-blue-100">{consultaSeleccionada.diagnostico || 'N/D'}</p>
                             </div>
-                          </div>
-                        </div>
-
-                        {/* PLAN */}
-                        <div>
-                          <h4 className="text-xs font-black text-slate-800 uppercase border-b border-slate-100 pb-1 mb-2">Plan</h4>
-                          <div>
-                            <span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Plan de manejo</span>
-                            <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.plan_tratamiento || 'N/D'}</p>
+                            <div>
+                              <span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Plan de manejo</span>
+                              <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.plan_tratamiento || 'N/D'}</p>
+                            </div>
                           </div>
                         </div>
 
@@ -643,6 +646,63 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                   <div className="text-center py-16 text-slate-400 text-xs">Selecciona una atención del historial o crea una nueva.</div>
                 )
               )
+            )}
+
+            {/* SECCIÓN 2: CITAS AGENDADAS DEL PACIENTE */}
+            {seccionActiva === 'citas' && (
+              <div className="space-y-4 max-w-3xl">
+                <div className="flex justify-between items-center bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                  <div>
+                    <h4 className="text-xs font-black text-slate-800 uppercase">Citas Registradas en Agenda</h4>
+                    <p className="text-[11px] text-slate-500">Historial y próximas atenciones del paciente</p>
+                  </div>
+                </div>
+
+                {citas.length === 0 ? (
+                  <div className="text-center py-12 bg-white rounded-2xl border border-slate-200 text-slate-400 text-xs space-y-2">
+                    <p>No hay citas programadas para este paciente.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {citas.map((c) => {
+                      const fechaCitaStr = c.fecha_cita ? String(c.fecha_cita).slice(0, 10) : 'Fecha N/D';
+                      const horaCitaStr = c.hora_cita ? String(c.hora_cita).slice(0, 5) : '';
+                      const horaFinStr = c.hora_fin ? ` - ${String(c.hora_fin).slice(0, 5)}` : '';
+                      const estado = c.estado || 'CONFIRMADA';
+
+                      const badgeColor = 
+                        estado === 'CONFIRMADA' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' :
+                        estado === 'CANCELADA' ? 'bg-rose-100 text-rose-800 border-rose-300' :
+                        estado === 'REAGENDAR' ? 'bg-amber-100 text-amber-800 border-amber-300' :
+                        'bg-blue-100 text-blue-800 border-blue-300';
+
+                      return (
+                        <div key={c.id} className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 shadow-2xs">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-slate-800 text-sm">📅 {fechaCitaStr}</span>
+                              <span className="font-mono text-xs text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded-md">
+                                ⏰ {horaCitaStr}{horaFinStr}
+                              </span>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeColor}`}>
+                                {estado}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-600 mt-1">
+                              <strong>Especialista:</strong> {c.doctor_nombre || 'Dra. Liseyda Maye'}
+                            </p>
+                            {c.indicaciones && (
+                              <p className="text-[11px] text-slate-500 italic mt-0.5">
+                                📌 {c.indicaciones}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             )}
 
             {/* SECCIÓN GENERAL: FICHA, EDAD Y TUTOR */}
@@ -764,11 +824,13 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
           </div>
         </main>
 
-        {/* COLUMNA DERECHA: HISTORIAL */}
+        {/* COLUMNA DERECHA: HISTORIAL Y ACCIONES */}
         <aside className="w-72 bg-slate-50 flex flex-col shrink-0 overflow-y-auto p-4 space-y-4 border-l border-slate-200">
-          <button onClick={() => { setModoCrear(true); setModoEditar(false); setSeccionActiva('inicio'); setSubTab('historia'); setFormConsulta({ doctor_nombre: 'Dra. Liseyda Maye', motivo_consulta: '', enfermedad_actual: '', antecedentes_patologicos: '', examen_fisico: '', reporte_examenes: '', diagnostico: '', plan_tratamiento: '', peso: '', talla: '', temperatura: '', presion_arterial: '' }); setMedicamentos([{ medicamento: '', frecuencia: 'Cada 8 horas', dias_tratamiento: 5, indicacion: '' }]); setEstudiosNuevos([{ tipo_estudio: '', laboratorio: '', observaciones: '' }]); }} className="w-full bg-[#10a37f] hover:bg-emerald-700 text-white font-bold text-xs p-2.5 rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
-            ➕ Nueva Consulta
-          </button>
+          <div className="space-y-2">
+            <button onClick={() => { setModoCrear(true); setModoEditar(false); setSeccionActiva('inicio'); setSubTab('historia'); setFormConsulta({ doctor_nombre: 'Dra. Liseyda Maye', motivo_consulta: '', enfermedad_actual: '', antecedentes_patologicos: '', examen_fisico: '', reporte_examenes: '', diagnostico: '', plan_tratamiento: '', peso: '', talla: '', temperatura: '', presion_arterial: '' }); setMedicamentos([{ medicamento: '', frecuencia: 'Cada 8 horas', dias_tratamiento: 5, indicacion: '' }]); setEstudiosNuevos([{ tipo_estudio: '', laboratorio: '', observaciones: '' }]); }} className="w-full bg-[#10a37f] hover:bg-emerald-700 text-white font-bold text-xs p-2.5 rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
+              ➕ Nueva Consulta
+            </button>
+          </div>
           
           <div className="flex-1">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">Historial ({consultas.length})</span>
@@ -777,7 +839,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
             ) : (
               <div className="space-y-2">
                 {consultas.map((c) => {
-                  const activa = !modoCrear && !modoEditar && consultaSeleccionada?.id === c.id;
+                  const activa = seccionActiva === 'inicio' && !modoCrear && !modoEditar && consultaSeleccionada?.id === c.id;
                   const fechaStr = c.fecha_formateada ? c.fecha_formateada.slice(0, 10) : (c.fecha ? String(c.fecha).slice(0, 10) : 'Fecha');
                   return (
                     <button key={c.id} onClick={() => { setConsultaSeleccionada(c); setModoCrear(false); setModoEditar(false); setSeccionActiva('inicio'); setSubTab('historia'); }} className={`w-full text-left p-3 rounded-xl border text-xs transition cursor-pointer flex flex-col gap-1 ${activa ? 'bg-[#1b4e7b] border-[#1b4e7b] text-white font-bold shadow-xs' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'}`}>
