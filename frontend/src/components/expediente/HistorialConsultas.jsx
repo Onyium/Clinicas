@@ -6,6 +6,7 @@ export default function HistorialConsultas({
   consultaSeleccionada,
   modoCrear,
   modoEditar,
+  seccionActiva, // 👈 AQUÍ FALTABA RECIBIRLO
   setConsultaSeleccionada,
   setModoCrear,
   setModoEditar,

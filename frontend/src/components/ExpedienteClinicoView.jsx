@@ -664,6 +664,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
           consultaSeleccionada={consultaSeleccionada}
           modoCrear={modoCrear}
           modoEditar={modoEditar}
+          seccionActiva={seccionActiva} 
           setConsultaSeleccionada={setConsultaSeleccionada}
           setModoCrear={setModoCrear}
           setModoEditar={setModoEditar}
