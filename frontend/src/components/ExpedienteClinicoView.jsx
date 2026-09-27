@@ -308,6 +308,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
           setModoCrear={setModoCrear}
           setModoEditar={setModoEditar}
           citasCount={citas.length}
+          onEliminarExpediente={handleEliminarExpediente}
         />
 
         {/* COLUMNA CENTRAL */}
