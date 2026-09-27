@@ -14,15 +14,17 @@ import {
   enviarRecordatorioPorCita
 } from './whatsapp.js';
 
+// 👇 CAMBIO AQUÍ: Usamos import en lugar de require
+import { v2 as cloudinary } from 'cloudinary';
+import multer from 'multer';
+import os from 'os';
+import fs from 'fs';
+
 dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-const cloudinary = require('cloudinary').v2;
-const multer = require('multer');
-const os = require('os');
-const fs = require('fs');
 
 // Configuración de Cloudinary
 cloudinary.config({
