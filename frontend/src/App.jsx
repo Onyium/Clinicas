@@ -11,7 +11,6 @@ import RecetaModal from './components/RecetaModal';
 import DiaDetalleModal from './components/DiaDetalleModal';
 import Login from './components/Login';
 import MainLayout from './components/MainLayout';
-// Importamos tu nuevo modal y quitamos el SelectorFechaModal
 import NuevoPacienteModal from './components/NuevoPacienteModal';
 import ExpedienteModal from './components/ExpedienteModal';
 import PacientesDirectorioModal from './components/PacientesDirectorioModal';
@@ -29,7 +28,6 @@ const STATUS_COLORS = {
 };
 
 export default function App() {
-  // NUEVO ESTADO DE SEGURIDAD (Revisa si ya inició sesión antes)
   const [isAuthenticated, setIsAuthenticated] = useState(
     localStorage.getItem('clinic_auth') === 'true'
   );
@@ -51,7 +49,6 @@ export default function App() {
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isRecetaOpen, setIsRecetaOpen] = useState(false);
   const [isDiaModalOpen, setIsDiaModalOpen] = useState(false);
-  // Nuevo estado para el modal de pacientes
   const [isNuevoPacienteModalOpen, setIsNuevoPacienteModalOpen] = useState(false);
   
   const [directorioAbierto, setDirectorioAbierto] = useState(false);
@@ -82,7 +79,6 @@ export default function App() {
   });
 
   const fetchData = async () => {
-    // Si no está autenticado, no intentes pedir datos (ahorras recursos del servidor)
     if (!isAuthenticated) return;
     
     try {
@@ -101,9 +97,17 @@ export default function App() {
 
   useEffect(() => {
     fetchData();
-  }, [isAuthenticated]); // Se vuelve a ejecutar cuando el usuario inicia sesión
+  }, [isAuthenticated]);
 
-  // SI NO ESTÁ AUTENTICADO, NO CARGA NADA MÁS QUE EL LOGIN
+  const handleLogout = () => {
+    if (window.confirm('¿Deseas cerrar la sesión actual?')) {
+      localStorage.removeItem('clinic_auth');
+      localStorage.removeItem('clinic_usuario');
+      localStorage.removeItem('clinic_user_nombre');
+      setIsAuthenticated(false);
+    }
+  };
+
   if (!isAuthenticated) {
     return (
       <Login 
@@ -115,7 +119,6 @@ export default function App() {
     );
   }
 
-  // A PARTIR DE AQUÍ, TODO SIGUE IGUAL. EL USUARIO YA ESTÁ LOGUEADO.
   const citasFiltradas = citas.filter(c => {
     const coincideDoctor = filtroDoctor === 'TODOS' || String(c.doctor_id) === String(filtroDoctor);
     const q = busqueda.trim().toLowerCase();
@@ -125,7 +128,6 @@ export default function App() {
     return coincideDoctor && coincideBusqueda;
   });
 
-  // Mapear eventos garantizando formato ISO seguro
   const events = citasFiltradas.map((c) => {
     const fechaStr = c.fecha_cita.toString().split('T')[0];
     const colores = STATUS_COLORS[c.estado] || { bg: '#3B82F6', border: '#2563EB' };
@@ -159,7 +161,6 @@ export default function App() {
     setIsModalOpen(true);
   };
 
-  // Clic en celda del calendario principal: muestra las citas de ese día
   const handleDateClick = (info) => {
     const fecha = info.dateStr.split('T')[0];
     setDiaSeleccionado(fecha);
@@ -188,7 +189,6 @@ export default function App() {
     setIsModalOpen(true);
   };
 
-  // Abrir modal de cita con los datos precargados de un paciente existente
   const abrirCitaParaPaciente = (paciente) => {
     setSelectedId(null);
     const primerDoc = doctores[0] || {};
@@ -263,16 +263,17 @@ export default function App() {
       {vistaActual === 'expediente' ? (
         <ExpedienteClinicoView
           pacienteId={pacienteActivoId}
-          onVolver={() => setVistaActual('agenda')}
+          onVolver={() => setVistaActual('catalogo')}
           onAgendarCita={(paciente) => abrirCitaParaPaciente(paciente)}
+          onLogout={handleLogout}
         />
       ) : (
         /* VISTA 2: LAYOUT GLOBAL CON SIDEBAR PARA AGENDA Y CATÁLOGO */
-        /* Eliminamos la prop onNuevaCita para que desaparezca el botón genérico de Agendar Cita del menú lateral */
         <MainLayout
           vistaActual={vistaActual}
           setVistaActual={setVistaActual}
           nombreClinica={config.nombre_clinica}
+          onLogout={handleLogout}
         >
           {vistaActual === 'catalogo' ? (
             <CatalogoPacientesView 
@@ -285,7 +286,6 @@ export default function App() {
                 setVistaActual('expediente');
               }}
               onIrAgenda={() => setVistaActual('agenda')}
-              // AQUÍ ACTIVAMOS TU NUEVO MODAL DE PACIENTES
               onNuevoPaciente={() => setIsNuevoPacienteModalOpen(true)}
             />
           ) : (
@@ -346,8 +346,18 @@ export default function App() {
                     <button
                       onClick={() => setIsConfigOpen(true)}
                       className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
+                      title="Configuración clínica"
                     >
                       ⚙️
+                    </button>
+
+                    {/* Botón de Cerrar Sesión */}
+                    <button
+                      onClick={handleLogout}
+                      className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 shadow-xs"
+                      title="Cerrar sesión"
+                    >
+                      🚪 Salir
                     </button>
                   </div>
                 </header>
@@ -375,13 +385,10 @@ export default function App() {
       )}
 
       {/* MODALES FLOTANTES GLOBALES */}
-      
-      {/* NUEVO MODAL DE PACIENTE */}
       <NuevoPacienteModal
         isOpen={isNuevoPacienteModalOpen}
         onClose={() => setIsNuevoPacienteModalOpen(false)}
         onPacienteCreado={(nuevoId) => {
-          // Cierra el modal y manda a la tía directo a la ficha del expediente
           setIsNuevoPacienteModalOpen(false);
           setPacienteActivoId(nuevoId);
           setVistaActual('expediente');
