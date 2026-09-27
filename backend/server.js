@@ -541,7 +541,8 @@ app.put('/api/consultas-independientes/:id', async (req, res) => {
     talla,
     temperatura,
     presion_arterial,
-    medicamentos
+    medicamentos,
+    estudios // 👈 Recibir estudios aquí
   } = req.body;
 
   try {
@@ -568,6 +569,7 @@ app.put('/api/consultas-independientes/:id', async (req, res) => {
       ]
     );
 
+    // 1. Sincronizar Medicamentos (Eliminar previos e insertar actualizados)
     if (Array.isArray(medicamentos)) {
       await pool.query('DELETE FROM recetas_medicamentos WHERE consulta_id = ?', [id]);
 
@@ -589,15 +591,40 @@ app.put('/api/consultas-independientes/:id', async (req, res) => {
 
           await pool.query(
             `INSERT INTO recetas_medicamentos 
-             (consulta_id, paciente_id, paciente_nombre, paciente_telefono, medicamento, dosis_indicacion, fecha_inicio, dias_tratamiento, hora_recordatorio, activo)
-             VALUES (?, ?, ?, ?, ?, ?, CURDATE(), ?, '08:00:00', TRUE)`,
+              (consulta_id, paciente_id, paciente_nombre, paciente_telefono, medicamento, dosis_indicacion, fecha_inicio, dias_tratamiento, hora_recordatorio, activo)
+              VALUES (?, ?, ?, ?, ?, ?, CURDATE(), ?, '08:00:00', TRUE)`,
             [id, pacienteId, pac.nombre || 'Paciente', pac.telefono || '', nombreMed, dosis, dias]
           );
         }
       }
     }
 
-    res.json({ ok: true, mensaje: 'Consulta y receta actualizadas con éxito' });
+    // 2. Sincronizar Estudios Clínicos (Evita la duplicación en cascada)
+    if (Array.isArray(estudios)) {
+      const [conRows] = await pool.query('SELECT paciente_id FROM consultas_medicas WHERE id = ?', [id]);
+      const pacienteId = conRows[0]?.paciente_id;
+
+      if (pacienteId) {
+        // Eliminar estudios previos que no tengan resultados cargados o reemplazar la lista activa
+        await pool.query('DELETE FROM estudios_clinicos WHERE consulta_id = ? AND (resultados_texto IS NULL OR resultados_texto = "")', [id]);
+
+        for (const est of estudios) {
+          const tipo = (est.tipo_estudio || '').trim();
+          if (!tipo) continue;
+
+          // Si ya tiene ID y resultados, no lo reinsertamos
+          if (est.id) continue;
+
+          await pool.query(
+            `INSERT INTO estudios_clinicos (consulta_id, paciente_id, tipo_estudio, laboratorio, observaciones)
+             VALUES (?, ?, ?, ?, ?)`,
+            [id, pacienteId, tipo, est.laboratorio || null, est.observaciones || null]
+          );
+        }
+      }
+    }
+
+    res.json({ ok: true, mensaje: 'Consulta actualizada con éxito' });
   } catch (err) {
     console.error('Error al actualizar consulta:', err);
     res.status(500).json({ error: err.message });

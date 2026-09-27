@@ -146,21 +146,16 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
       const listaEstudiosValidos = estudiosNuevos.filter(e => e.tipo_estudio && e.tipo_estudio.trim() !== '');
 
       if (modoEditar && consultaSeleccionada) {
+        // Enviar solo los estudios que realmente son nuevos (los que no tienen ID)
+        const soloNuevos = listaEstudiosValidos.filter(est => !est.id);
+
         await api.put(`/api/consultas-independientes/${consultaSeleccionada.id}`, { 
           ...formConsulta, 
-          medicamentos: listaMedicamentosValidos 
+          medicamentos: listaMedicamentosValidos,
+          estudios: soloNuevos
         });
 
-        if (listaEstudiosValidos.length > 0) {
-          for (const est of listaEstudiosValidos) {
-            await api.post('/api/estudios-clinicos', { 
-              consulta_id: consultaSeleccionada.id, 
-              paciente_id: pacienteId, 
-              ...est 
-            });
-          }
-        }
-        alert('✅ Consulta, signos vitales, receta y estudios actualizados con éxito.');
+        alert('✅ Consulta, signos vitales y receta actualizados con éxito.');
       } else {
         const res = await api.post('/api/consultas-independientes', { 
           paciente_id: pacienteId, 
@@ -183,6 +178,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
       setModoCrear(false);
       setModoEditar(false);
       setSubTab('historia'); 
+      setEstudiosNuevos([{ tipo_estudio: '', laboratorio: '', observaciones: '' }]); // Resetear lista temporal
       await cargarExpediente();
     } catch (err) {
       console.error(err);
