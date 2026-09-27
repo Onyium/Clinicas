@@ -1,6 +1,10 @@
 // src/components/expediente/HistorialConsultas.jsx
 import React from 'react';
 
+import SidebarPaciente from './expediente/SidebarPaciente';
+import FormularioGeneral from './expediente/FormularioGeneral';
+import HistorialConsultas from './expediente/HistorialConsultas';
+
 export default function HistorialConsultas({
   consultas,
   consultaSeleccionada,
@@ -54,13 +58,6 @@ export default function HistorialConsultas({
         <button onClick={iniciarNuevaConsulta} className="w-full bg-[#10a37f] hover:bg-emerald-700 text-white font-bold text-xs p-2.5 rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
           ➕ Nueva Consulta
         </button>
-        <button 
-                type="button" 
-                onClick={() => onAgendarCita && onAgendarCita(paciente)}
-                className="bg-[#10a37f] hover:bg-emerald-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
-              >
-                📅 Agendar Nueva Cita
-              </button>
       </div>
       
       <div className="flex-1">
