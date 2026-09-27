@@ -3,6 +3,11 @@ import api from '../api';
 import RecetaTab from './RecetaTab';
 import LaboratorioTab from './LaboratorioTab';
 
+// Importación de submódulos
+import SidebarPaciente from './expediente/SidebarPaciente';
+import FormularioGeneral from './expediente/FormularioGeneral';
+import HistorialConsultas from './expediente/HistorialConsultas';
+
 function calcularEdadDesdeFecha(fechaNacimiento) {
   if (!fechaNacimiento) return '';
   const hoy = new Date();
@@ -113,21 +118,13 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
   const handleCambioFechaNac = (e) => {
     const nuevaFecha = e.target.value;
     const nuevaEdad = calcularEdadDesdeFecha(nuevaFecha);
-    setFormGeneral(prev => ({
-      ...prev,
-      fecha_nacimiento: nuevaFecha,
-      edad: nuevaEdad
-    }));
+    setFormGeneral(prev => ({ ...prev, fecha_nacimiento: nuevaFecha, edad: nuevaEdad }));
   };
 
   const handleCambioEdad = (e) => {
     const nuevaEdad = e.target.value;
     const fechaAprox = estimarFechaDesdeEdad(nuevaEdad);
-    setFormGeneral(prev => ({
-      ...prev,
-      edad: nuevaEdad,
-      fecha_nacimiento: fechaAprox || prev.fecha_nacimiento
-    }));
+    setFormGeneral(prev => ({ ...prev, edad: nuevaEdad, fecha_nacimiento: fechaAprox || prev.fecha_nacimiento }));
   };
 
   const agregarMedicamento = () => setMedicamentos([...medicamentos, { medicamento: '', frecuencia: 'Cada 8 horas', dias_tratamiento: 5, indicacion: '' }]);
@@ -151,35 +148,21 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
           medicamentos: listaMedicamentosValidos 
         });
 
-        // 🔥 SOLUCIÓN A LA CLONACIÓN: 
-        // Solo enviar al backend los laboratorios que NO tienen un "id" registrado (los verdaderamente nuevos)
         const estudiosParaInsertar = listaEstudiosValidos.filter(est => !est.id);
 
         if (estudiosParaInsertar.length > 0) {
           for (const est of estudiosParaInsertar) {
-            await api.post('/api/estudios-clinicos', { 
-              consulta_id: consultaSeleccionada.id, 
-              paciente_id: pacienteId, 
-              ...est 
-            });
+            await api.post('/api/estudios-clinicos', { consulta_id: consultaSeleccionada.id, paciente_id: pacienteId, ...est });
           }
         }
         alert('✅ Consulta, signos vitales, receta y nuevos estudios guardados con éxito.');
       } else {
-        const res = await api.post('/api/consultas-independientes', { 
-          paciente_id: pacienteId, 
-          ...formConsulta, 
-          medicamentos: listaMedicamentosValidos 
-        });
+        const res = await api.post('/api/consultas-independientes', { paciente_id: pacienteId, ...formConsulta, medicamentos: listaMedicamentosValidos });
         const nuevaConsultaId = res.data.id;
         
         if (listaEstudiosValidos.length > 0 && nuevaConsultaId) {
           for (const est of listaEstudiosValidos) {
-            await api.post('/api/estudios-clinicos', { 
-              consulta_id: nuevaConsultaId, 
-              paciente_id: pacienteId, 
-              ...est 
-            });
+            await api.post('/api/estudios-clinicos', { consulta_id: nuevaConsultaId, paciente_id: pacienteId, ...est });
           }
         }
         alert('✅ Consulta guardada con éxito.');
@@ -216,7 +199,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
 
   const handleEliminarConsulta = async () => {
     if (!consultaSeleccionada) return;
-    if (!window.confirm('¿Estás seguro de eliminar esta consulta, sus recetas y estudios asociados? Esta acción no se puede deshacer.')) return;
+    if (!window.confirm('¿Estás seguro de eliminar esta consulta? Esta acción no se puede deshacer.')) return;
     try {
       await api.delete(`/api/consultas-independientes/${consultaSeleccionada.id}`);
       alert('🗑️ Consulta eliminada con éxito.');
@@ -226,7 +209,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
   };
 
   const handleEliminarExpediente = async () => {
-    if (!window.confirm('⚠️ ¿Estás COMPLETAMENTE SEGURO de eliminar este expediente? Se borrarán todas sus consultas, recetas, estudios y citas asociadas.')) return;
+    if (!window.confirm('⚠️ ¿Estás COMPLETAMENTE SEGURO de eliminar este expediente?')) return;
     try { await api.delete(`/api/pacientes/${pacienteId}`); alert('🗑️ Expediente eliminado.'); onVolver(); } catch (err) { alert('Error al eliminar el expediente.'); }
   };
 
@@ -249,23 +232,14 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
 
     const recs = tratamientos.filter(t => t.consulta_id === consultaSeleccionada.id);
     if (recs.length > 0) {
-      setMedicamentos(recs.map(r => ({ 
-        medicamento: r.medicamento || '', 
-        frecuencia: r.dosis_indicacion || 'Cada 8 horas', 
-        dias_tratamiento: r.dias_tratamiento || 5, 
-        indicacion: '' 
-      })));
+      setMedicamentos(recs.map(r => ({ medicamento: r.medicamento || '', frecuencia: r.dosis_indicacion || 'Cada 8 horas', dias_tratamiento: r.dias_tratamiento || 5, indicacion: '' })));
     } else { 
       setMedicamentos([{ medicamento: '', frecuencia: 'Cada 8 horas', dias_tratamiento: 5, indicacion: '' }]); 
     }
 
     const ests = estudios.filter(e => e.consulta_id === consultaSeleccionada.id);
     if (ests.length > 0) {
-      setEstudiosNuevos(ests.map(e => ({
-        tipo_estudio: e.tipo_estudio || '',
-        laboratorio: e.laboratorio || '',
-        observaciones: e.observaciones || ''
-      })));
+      setEstudiosNuevos(ests.map(e => ({ tipo_estudio: e.tipo_estudio || '', laboratorio: e.laboratorio || '', observaciones: e.observaciones || '' })));
     } else {
       setEstudiosNuevos([{ tipo_estudio: '', laboratorio: '', observaciones: '' }]);
     }
@@ -318,59 +292,17 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
       {/* ÁREA PRINCIPAL */}
       <div className="flex-1 flex overflow-hidden">
         
-        {/* COLUMNA IZQUIERDA */}
-        <aside className="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0 overflow-y-auto">
-          <div className="p-4 flex flex-col items-center text-center border-b border-slate-100">
-            {paciente.foto_url ? (
-              <img src={paciente.foto_url} alt={paciente.nombre} className="w-16 h-16 rounded-full object-cover border-2 border-blue-200 shadow-inner mb-2" />
-            ) : (
-              <div className="w-16 h-16 rounded-full bg-blue-50 border-2 border-blue-200 flex items-center justify-center text-2xl font-black text-blue-700 shadow-inner mb-2">
-                {paciente.nombre?.charAt(0) || 'P'}
-              </div>
-            )}
-            <h2 className="text-sm font-black text-slate-800 uppercase tracking-tight">{paciente.nombre}</h2>
-            
-            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap justify-center">
-              <span className="text-[11px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-md border border-emerald-200">
-                🎂 {edadActual !== '' ? `${edadActual} años` : 'Edad sin definir'}
-              </span>
-              <span className="text-[11px] bg-blue-50 text-blue-700 font-semibold px-2 py-0.5 rounded-md border border-blue-100">
-                {paciente.sexo === 'M' ? 'Masculino' : paciente.sexo === 'F' ? 'Femenino' : 'Otro'}
-              </span>
-            </div>
-
-            {esMenorDeEdad && (
-              <div className="mt-2 w-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold p-1.5 rounded-lg text-left">
-                👶 <strong>Menor de edad</strong>
-                {paciente.responsable_nombre ? (
-                  <span className="block font-normal truncate">Resp: {paciente.responsable_nombre}</span>
-                ) : (
-                  <span className="block font-normal text-rose-600">Requiere tutor registrado</span>
-                )}
-              </div>
-            )}
-
-            <span className="text-xs text-blue-600 font-mono font-bold mt-2">Folio: #{String(paciente.id).padStart(4, '0')}</span>
-            <span className="text-xs text-slate-500 font-mono mt-0.5">📞 {paciente.telefono}</span>
-            {paciente.alergias && paciente.alergias.toLowerCase() !== 'ninguna' && (
-              <div className="mt-3 w-full bg-rose-600 text-white text-[11px] font-bold py-1 px-2 rounded-lg shadow-xs uppercase tracking-wider">
-                ⚠️ Alergia: {paciente.alergias}
-              </div>
-            )}
-          </div>
-
-          <nav className="p-2 space-y-1 text-xs font-semibold">
-            <button onClick={() => { setSeccionActiva('inicio'); setModoCrear(false); setModoEditar(false); }} className={`w-full text-left px-3 py-2.5 rounded-xl transition ${seccionActiva === 'inicio' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}>
-              🩺 Historial de Consultas
-            </button>
-            <button onClick={() => setSeccionActiva('citas')} className={`w-full text-left px-3 py-2.5 rounded-xl transition ${seccionActiva === 'citas' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}>
-              📅 Citas Agendadas ({citas.length})
-            </button>
-            <button onClick={() => setSeccionActiva('general')} className={`w-full text-left px-3 py-2.5 rounded-xl transition ${seccionActiva === 'general' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}>
-              📋 Datos Generales / Ficha
-            </button>
-          </nav>
-        </aside>
+        {/* COLUMNA IZQUIERDA (MODULARIZADA) */}
+        <SidebarPaciente 
+          paciente={paciente}
+          edadActual={edadActual}
+          esMenorDeEdad={esMenorDeEdad}
+          seccionActiva={seccionActiva}
+          setSeccionActiva={setSeccionActiva}
+          setModoCrear={setModoCrear}
+          setModoEditar={setModoEditar}
+          citasCount={citas.length}
+        />
 
         {/* COLUMNA CENTRAL */}
         <main className="flex-1 bg-white flex flex-col overflow-y-auto border-r border-slate-200 relative">
@@ -710,154 +642,37 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
               </div>
             )}
 
-            {/* SECCIÓN GENERAL: FICHA, EDAD Y TUTOR */}
+            {/* SECCIÓN GENERAL: FICHA (MODULARIZADA) */}
             {seccionActiva === 'general' && (
-              <form onSubmit={handleGuardarGeneral} className="space-y-4 max-w-2xl">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Nombre Completo</label>
-                    <input type="text" value={formGeneral.nombre} onChange={(e) => setFormGeneral({ ...formGeneral, nombre: e.target.value })} className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:border-blue-500" />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Teléfono WhatsApp</label>
-                    <input type="text" value={formGeneral.telefono} onChange={(e) => setFormGeneral({ ...formGeneral, telefono: e.target.value })} className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:border-blue-500 font-mono" />
-                  </div>
-                </div>
-                
-                {/* FECHA Y EDAD VINCULADAS */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Fecha de Nacimiento</label>
-                    <input 
-                      type="date" 
-                      value={formGeneral.fecha_nacimiento} 
-                      onChange={handleCambioFechaNac} 
-                      className="w-full border border-slate-300 bg-white rounded-xl p-2 text-xs outline-none focus:border-blue-500" 
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">
-                      Edad (Años) <span className="text-blue-600 font-normal">⇄ Editable</span>
-                    </label>
-                    <input 
-                      type="number" 
-                      min="0"
-                      max="120"
-                      placeholder="Ej. 14"
-                      value={formGeneral.edad} 
-                      onChange={handleCambioEdad} 
-                      className="w-full border border-slate-300 bg-white text-slate-800 font-bold rounded-xl p-2 text-xs outline-none focus:border-blue-500" 
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Género</label>
-                    <select value={formGeneral.sexo} onChange={(e) => setFormGeneral({ ...formGeneral, sexo: e.target.value })} className="w-full border border-slate-300 rounded-xl p-2 text-xs bg-white outline-none focus:border-blue-500">
-                      <option value="M">Masculino</option>
-                      <option value="F">Femenino</option>
-                      <option value="Otro">Otro</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* MENOR DE EDAD / RESPONSABLE */}
-                {esMenorDeEdad && (
-                  <div className="bg-amber-50/70 border-2 border-amber-300 p-4 rounded-2xl space-y-3 transition-all animate-fadeIn">
-                    <div className="flex items-center gap-2">
-                      <span className="text-base">👶</span>
-                      <h4 className="text-xs font-black text-amber-900 uppercase tracking-wider">
-                        Paciente Menor de Edad (Datos del Tutor / Responsable)
-                      </h4>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <div>
-                        <label className="text-[11px] font-bold text-amber-900 block mb-1">Nombre del Tutor *</label>
-                        <input 
-                          type="text" 
-                          required={esMenorDeEdad}
-                          placeholder="Ej. Carmen Rodríguez"
-                          value={formGeneral.responsable_nombre} 
-                          onChange={(e) => setFormGeneral({ ...formGeneral, responsable_nombre: e.target.value })} 
-                          className="w-full bg-white border border-amber-300 rounded-xl p-2 text-xs outline-none focus:border-amber-600" 
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-bold text-amber-900 block mb-1">Parentesco *</label>
-                        <select 
-                          value={formGeneral.responsable_parentesco} 
-                          onChange={(e) => setFormGeneral({ ...formGeneral, responsable_parentesco: e.target.value })}
-                          className="w-full bg-white border border-amber-300 rounded-xl p-2 text-xs outline-none focus:border-amber-600"
-                        >
-                          <option value="Madre">Madre</option>
-                          <option value="Padre">Padre</option>
-                          <option value="Tutor Legal">Tutor Legal</option>
-                          <option value="Abuelo/a">Abuelo/a</option>
-                          <option value="Tío/a">Tío/a</option>
-                          <option value="Otro">Otro</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-bold text-amber-900 block mb-1">Teléfono Tutor *</label>
-                        <input 
-                          type="text" 
-                          placeholder="Ej. +1 809-555-0199"
-                          value={formGeneral.responsable_telefono} 
-                          onChange={(e) => setFormGeneral({ ...formGeneral, responsable_telefono: e.target.value })} 
-                          className="w-full bg-white border border-amber-300 rounded-xl p-2 text-xs outline-none focus:border-amber-600 font-mono" 
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">Alergias</label>
-                  <input type="text" value={formGeneral.alergias} onChange={(e) => setFormGeneral({ ...formGeneral, alergias: e.target.value })} className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:border-blue-500" />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">Antecedentes Generales</label>
-                  <textarea rows="3" value={formGeneral.antecedentes} onChange={(e) => setFormGeneral({ ...formGeneral, antecedentes: e.target.value })} className="w-full border border-slate-300 rounded-xl p-2 text-xs outline-none focus:border-blue-500" />
-                </div>
-
-                <div className="pt-2 flex justify-end">
-                  <button type="submit" disabled={guardandoGeneral} className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2 rounded-xl shadow transition cursor-pointer">
-                    {guardandoGeneral ? 'Guardando...' : '💾 Guardar Ficha'}
-                  </button>
-                </div>
-              </form>
+              <FormularioGeneral 
+                formGeneral={formGeneral}
+                setFormGeneral={setFormGeneral}
+                handleCambioFechaNac={handleCambioFechaNac}
+                handleCambioEdad={handleCambioEdad}
+                handleGuardarGeneral={handleGuardarGeneral}
+                guardandoGeneral={guardandoGeneral}
+                esMenorDeEdad={esMenorDeEdad}
+              />
             )}
 
           </div>
         </main>
 
-        {/* COLUMNA DERECHA: HISTORIAL Y ACCIONES */}
-        <aside className="w-72 bg-slate-50 flex flex-col shrink-0 overflow-y-auto p-4 space-y-4 border-l border-slate-200">
-          <div className="space-y-2">
-            <button onClick={() => { setModoCrear(true); setModoEditar(false); setSeccionActiva('inicio'); setSubTab('historia'); setFormConsulta({ doctor_nombre: 'Dra. Liseyda Maye', motivo_consulta: '', enfermedad_actual: '', antecedentes_patologicos: '', examen_fisico: '', reporte_examenes: '', diagnostico: '', plan_tratamiento: '', peso: '', talla: '', temperatura: '', presion_arterial: '' }); setMedicamentos([{ medicamento: '', frecuencia: 'Cada 8 horas', dias_tratamiento: 5, indicacion: '' }]); setEstudiosNuevos([{ tipo_estudio: '', laboratorio: '', observaciones: '' }]); }} className="w-full bg-[#10a37f] hover:bg-emerald-700 text-white font-bold text-xs p-2.5 rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
-              ➕ Nueva Consulta
-            </button>
-          </div>
-          
-          <div className="flex-1">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">Historial ({consultas.length})</span>
-            {consultas.length === 0 ? (
-              <p className="text-xs text-slate-400 italic">No hay atenciones pasadas.</p>
-            ) : (
-              <div className="space-y-2">
-                {consultas.map((c) => {
-                  const activa = seccionActiva === 'inicio' && !modoCrear && !modoEditar && consultaSeleccionada?.id === c.id;
-                  const fechaStr = c.fecha_formateada ? c.fecha_formateada.slice(0, 10) : (c.fecha ? String(c.fecha).slice(0, 10) : 'Fecha');
-                  return (
-                    <button key={c.id} onClick={() => { setConsultaSeleccionada(c); setModoCrear(false); setModoEditar(false); setSeccionActiva('inicio'); setSubTab('historia'); }} className={`w-full text-left p-3 rounded-xl border text-xs transition cursor-pointer flex flex-col gap-1 ${activa ? 'bg-[#1b4e7b] border-[#1b4e7b] text-white font-bold shadow-xs' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'}`}>
-                      <span className={`text-xs font-bold ${activa ? 'text-white' : 'text-slate-800'}`}>📅 {fechaStr}</span>
-                      <span className={`block text-[11px] truncate mt-0.5 ${activa ? 'text-blue-100' : 'text-slate-500'}`}>{c.doctor_nombre}</span>
-                      {c.diagnostico && (<span className={`block text-[10px] truncate italic ${activa ? 'text-blue-100' : 'text-blue-600'}`}>Dx: {c.diagnostico}</span>)}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </aside>
+        {/* COLUMNA DERECHA: HISTORIAL (MODULARIZADA) */}
+        <HistorialConsultas 
+          consultas={consultas}
+          consultaSeleccionada={consultaSeleccionada}
+          modoCrear={modoCrear}
+          modoEditar={modoEditar}
+          setConsultaSeleccionada={setConsultaSeleccionada}
+          setModoCrear={setModoCrear}
+          setModoEditar={setModoEditar}
+          setSeccionActiva={setSeccionActiva}
+          setSubTab={setSubTab}
+          setFormConsulta={setFormConsulta}
+          setMedicamentos={setMedicamentos}
+          setEstudiosNuevos={setEstudiosNuevos}
+        />
 
       </div>
     </div>
