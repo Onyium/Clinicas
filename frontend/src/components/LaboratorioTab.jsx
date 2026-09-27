@@ -105,7 +105,7 @@ export default function LaboratorioTab({
 
     const c = consultaSeleccionada || {};
     
-    // Variables dinámicas desde la configuración
+    // Variables dinámicas
     const clinicaNombre = configClinica.nombre_clinica || 'CLÍNICA MÉDICA FAMILIAR';
     const doctorTitular = resolverNombreDoctor(c.doctor_nombre);
     const jvpm = configClinica.jvpm || 'JVPM No. 15381';
@@ -117,8 +117,8 @@ export default function LaboratorioTab({
     const fechaStr = c.fecha_formateada || (c.fecha ? String(c.fecha).slice(0, 10) : new Date().toISOString().slice(0, 10));
     const pacienteNombre = paciente.nombre || 'Particular';
 
-    const ventanaImpresion = window.open('', '_blank');
-    ventanaImpresion.document.write(`
+    // 🔥 SOLUCIÓN DEFINITIVA (BLOB HTML)
+    const htmlCompleto = `
       <!DOCTYPE html>
       <html>
         <head>
@@ -126,26 +126,10 @@ export default function LaboratorioTab({
           <title>Orden de Laboratorio - ${pacienteNombre}</title>
           <style>
             @page { size: auto; margin: 12mm 15mm; }
-            body { 
-              font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
-              color: #1e293b; 
-              margin: 0; 
-              padding: 0; 
-              line-height: 1.4; 
-              font-size: 13px; 
-            }
+            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; margin: 0; padding: 0; line-height: 1.4; font-size: 13px; }
             .orden-container { max-width: 720px; margin: 0 auto; }
             
-            /* ENCABEZADO IDÉNTICO AL MEMBRETE GENERAL */
-            .header-grid { 
-              display: grid; 
-              grid-template-columns: 1.4fr 1fr; 
-              gap: 20px; 
-              align-items: center; 
-              border-bottom: 2px solid #0284c7; 
-              padding-bottom: 14px; 
-              margin-bottom: 15px; 
-            }
+            .header-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; align-items: center; border-bottom: 2px solid #0284c7; padding-bottom: 14px; margin-bottom: 15px; }
             .header-left { display: flex; align-items: center; gap: 12px; }
             .logo-img { max-width: 80px; max-height: 80px; object-fit: contain; }
             .clinica-tag { font-size: 11px; font-weight: 800; color: #0284c7; letter-spacing: 2px; text-transform: uppercase; margin: 0; }
@@ -157,61 +141,16 @@ export default function LaboratorioTab({
             .meta-item { margin-bottom: 6px; }
             .meta-item strong { display: block; color: #0b4f6c; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
 
-            /* TÍTULO DE DOCUMENTO */
-            .doc-title { 
-              text-align: center; 
-              font-size: 12px; 
-              font-weight: 800; 
-              letter-spacing: 2px; 
-              color: #0b4f6c; 
-              background-color: #f0f9ff; 
-              border: 1px solid #bae6fd; 
-              padding: 6px; 
-              border-radius: 8px; 
-              margin-bottom: 14px; 
-              text-transform: uppercase; 
-            }
+            .doc-title { text-align: center; font-size: 12px; font-weight: 800; letter-spacing: 2px; color: #0b4f6c; background-color: #f0f9ff; border: 1px solid #bae6fd; padding: 6px; border-radius: 8px; margin-bottom: 14px; text-transform: uppercase; }
 
-            /* CINTILLO DEL PACIENTE */
-            .patient-box { 
-              border: 1.5px solid #0284c7; 
-              border-radius: 12px; 
-              padding: 10px 16px; 
-              margin-bottom: 16px; 
-              display: grid; 
-              grid-template-columns: 2fr 1fr; 
-              gap: 8px 16px; 
-              font-size: 12px; 
-            }
+            .patient-box { border: 1.5px solid #0284c7; border-radius: 12px; padding: 10px 16px; margin-bottom: 16px; display: grid; grid-template-columns: 2fr 1fr; gap: 8px 16px; font-size: 12px; }
             .patient-box strong { color: #0b4f6c; }
 
-            /* TABLA DE EXÁMENES */
             table { width: 100%; border-collapse: collapse; margin-top: 5px; }
-            th { 
-              background-color: #f0f9ff; 
-              color: #0b4f6c; 
-              text-align: left; 
-              padding: 9px 12px; 
-              font-size: 11px; 
-              text-transform: uppercase; 
-              border-bottom: 1.5px solid #bae6fd; 
-              letter-spacing: 0.5px;
-            }
-            td { 
-              padding: 10px 12px; 
-              border-bottom: 1px solid #f1f5f9; 
-              vertical-align: top; 
-              font-size: 12px; 
-            }
+            th { background-color: #f0f9ff; color: #0b4f6c; text-align: left; padding: 9px 12px; font-size: 11px; text-transform: uppercase; border-bottom: 1.5px solid #bae6fd; letter-spacing: 0.5px; }
+            td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; font-size: 12px; }
             
-            /* FIRMA Y SELLO */
-            .footer-sign { 
-              margin-top: 55px; 
-              text-align: center; 
-              display: flex; 
-              flex-direction: column; 
-              align-items: center; 
-            }
+            .footer-sign { margin-top: 55px; text-align: center; display: flex; flex-direction: column; align-items: center; }
             .sign-line { width: 240px; border-top: 1.5px solid #0b4f6c; margin-bottom: 4px; }
             .sign-doctor { font-weight: 800; font-size: 12px; color: #0b4f6c; text-transform: uppercase; }
             .sign-sub { font-size: 10px; color: #64748b; }
@@ -220,7 +159,6 @@ export default function LaboratorioTab({
         <body>
           <div class="orden-container">
             
-            <!-- ENCABEZADO -->
             <div class="header-grid">
               <div class="header-left">
                 ${logoUrl 
@@ -253,7 +191,6 @@ export default function LaboratorioTab({
 
             <div class="doc-title">Orden de Laboratorio & Exámenes Clínicos</div>
 
-            <!-- CINTILLO PACIENTE -->
             <div class="patient-box">
               <div><strong>Paciente:</strong> ${pacienteNombre}</div>
               <div><strong>Fecha:</strong> ${fechaStr}</div>
@@ -262,7 +199,6 @@ export default function LaboratorioTab({
               ${c.diagnostico ? `<div style="grid-column: span 2;"><strong>Diagnóstico Presuntivo:</strong> ${c.diagnostico}</div>` : ''}
             </div>
 
-            <!-- EXÁMENES SOLICITADOS -->
             <table>
               <thead>
                 <tr>
@@ -282,7 +218,6 @@ export default function LaboratorioTab({
               </tbody>
             </table>
 
-            <!-- PIE DE FIRMA -->
             <div class="footer-sign">
               <div class="sign-line"></div>
               <div class="sign-doctor">${doctorTitular}</div>
@@ -291,25 +226,31 @@ export default function LaboratorioTab({
 
           </div>
 
-          <!-- SCRIPT INYECTADO PARA NO CONGELAR REACT -->
           <script>
             window.onload = function() {
               setTimeout(function() {
                 window.print();
-              }, 300);
+              }, 400);
             };
-
             window.onafterprint = function() {
               window.close();
             };
           </script>
         </body>
       </html>
-    `);
-    ventanaImpresion.document.close();
+    `;
+
+    // 1. Crear archivo temporal en memoria
+    const blob = new Blob([htmlCompleto], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    
+    // 2. Abrir rompiendo la dependencia con la app principal
+    window.open(url, '_blank', 'noopener,noreferrer');
+    
+    // 3. Limpiar memoria después de unos segundos
+    setTimeout(() => URL.revokeObjectURL(url), 8000);
   };
 
-  // VISTA ACTIVA AL CREAR O EDITAR LA CONSULTA
   if (modoCrear || modoEditar) {
     return (
       <div className="p-4 bg-blue-50/50 border border-blue-200 rounded-2xl space-y-3">
@@ -368,7 +309,6 @@ export default function LaboratorioTab({
     );
   }
 
-  // VISTA DE LECTURA E IMPRESIÓN DIRECTA
   return (
     <div className="border border-slate-200 rounded-2xl p-5 bg-white shadow-2xs space-y-4">
       <div className="flex justify-between items-center mb-2">

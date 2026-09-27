@@ -80,8 +80,8 @@ export default function RecetaTab({
       </div>
     `).join('');
 
-    const ventana = window.open('', '_blank');
-    ventana.document.write(`
+    // 🔥 SOLUCIÓN DEFINITIVA (BLOB HTML)
+    const htmlCompleto = `
       <!DOCTYPE html>
       <html>
         <head>
@@ -92,9 +92,7 @@ export default function RecetaTab({
             body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; margin: 0; padding: 0; line-height: 1.4; }
             .receta-container { max-width: 720px; margin: 0 auto; }
             
-            /* HEADER IDENTICO A LA PLANTILLA */
             .header-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; align-items: center; border-bottom: 2px solid #0284c7; padding-bottom: 15px; margin-bottom: 15px; }
-            
             .header-left { display: flex; align-items: center; gap: 12px; }
             .logo-img { max-width: 80px; max-height: 80px; object-fit: contain; }
             .clinica-tag { font-size: 11px; font-weight: 800; color: #0284c7; letter-spacing: 2px; text-transform: uppercase; margin: 0; }
@@ -106,13 +104,11 @@ export default function RecetaTab({
             .meta-item { margin-bottom: 6px; }
             .meta-item strong { display: block; color: #0b4f6c; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
             
-            /* CINTILLO DEL PACIENTE */
             .patient-box { border: 1.5px solid #0284c7; border-radius: 12px; padding: 10px 16px; margin-bottom: 15px; display: grid; grid-template-columns: 2fr 1fr; gap: 10px; font-size: 12px; }
             .patient-field { display: flex; gap: 6px; align-items: baseline; }
             .field-label { font-weight: 800; color: #0b4f6c; font-size: 11px; text-transform: uppercase; }
             .field-value { font-weight: 700; color: #0f172a; border-bottom: 1px solid #94a3b8; flex: 1; padding-bottom: 1px; }
 
-            /* CUERPO DE PRESCRIPCION */
             .rx-box { border: 1.5px solid #0284c7; border-radius: 14px; padding: 16px 20px; min-height: 380px; position: relative; }
             .rx-header { text-align: center; margin-bottom: 15px; }
             .rx-symbol { font-size: 28px; font-family: serif; font-weight: 900; font-style: italic; color: #0b4f6c; line-height: 1; margin: 0; }
@@ -120,7 +116,6 @@ export default function RecetaTab({
             
             .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.04; font-size: 160px; pointer-events: none; }
             
-            /* PIE DE FIRMA */
             .footer-sign { margin-top: 30px; text-align: center; display: flex; flex-direction: column; align-items: center; }
             .sign-line { width: 240px; border-top: 1.5px solid #0b4f6c; margin-bottom: 4px; }
             .sign-title { font-size: 10px; font-weight: 800; color: #0b4f6c; letter-spacing: 1.5px; text-transform: uppercase; }
@@ -130,7 +125,6 @@ export default function RecetaTab({
         <body>
           <div class="receta-container">
             
-            <!-- ENCABEZADO -->
             <div class="header-grid">
               <div class="header-left">
                 ${logoUrl 
@@ -161,7 +155,6 @@ export default function RecetaTab({
               </div>
             </div>
 
-            <!-- CINTILLO PACIENTE -->
             <div class="patient-box">
               <div class="patient-field">
                 <span class="field-label">Nombre:</span>
@@ -181,20 +174,17 @@ export default function RecetaTab({
               </div>
             </div>
 
-            <!-- CUERPO RECETA RX -->
             <div class="rx-box">
               <div class="watermark">⚕️</div>
               <div class="rx-header">
                 <div class="rx-symbol">Rx</div>
                 <div class="rx-title">Receta Médica</div>
               </div>
-
               <div>
                 ${medicamentosHtml}
               </div>
             </div>
 
-            <!-- FIRMA Y SELLO -->
             <div class="footer-sign">
               <div class="sign-line"></div>
               <div class="sign-title">Firma y Sello del Médico</div>
@@ -203,22 +193,29 @@ export default function RecetaTab({
 
           </div>
 
-          <!-- SCRIPT INYECTADO PARA NO CONGELAR REACT -->
           <script>
             window.onload = function() {
               setTimeout(function() {
                 window.print();
-              }, 300);
+              }, 400);
             };
-
             window.onafterprint = function() {
               window.close();
             };
           </script>
         </body>
       </html>
-    `);
-    ventana.document.close();
+    `;
+
+    // 1. Crear archivo temporal en memoria
+    const blob = new Blob([htmlCompleto], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    
+    // 2. Abrir rompiendo la dependencia con la app principal
+    window.open(url, '_blank', 'noopener,noreferrer');
+    
+    // 3. Limpiar memoria después de unos segundos
+    setTimeout(() => URL.revokeObjectURL(url), 8000);
   };
 
   return (
