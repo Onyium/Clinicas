@@ -146,16 +146,25 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
       const listaEstudiosValidos = estudiosNuevos.filter(e => e.tipo_estudio && e.tipo_estudio.trim() !== '');
 
       if (modoEditar && consultaSeleccionada) {
-        // Enviar solo los estudios que realmente son nuevos (los que no tienen ID)
-        const soloNuevos = listaEstudiosValidos.filter(est => !est.id);
-
         await api.put(`/api/consultas-independientes/${consultaSeleccionada.id}`, { 
           ...formConsulta, 
-          medicamentos: listaMedicamentosValidos,
-          estudios: soloNuevos
+          medicamentos: listaMedicamentosValidos 
         });
 
-        alert('✅ Consulta, signos vitales y receta actualizados con éxito.');
+        // 🔥 SOLUCIÓN A LA CLONACIÓN: 
+        // Solo enviar al backend los laboratorios que NO tienen un "id" registrado (los verdaderamente nuevos)
+        const estudiosParaInsertar = listaEstudiosValidos.filter(est => !est.id);
+
+        if (estudiosParaInsertar.length > 0) {
+          for (const est of estudiosParaInsertar) {
+            await api.post('/api/estudios-clinicos', { 
+              consulta_id: consultaSeleccionada.id, 
+              paciente_id: pacienteId, 
+              ...est 
+            });
+          }
+        }
+        alert('✅ Consulta, signos vitales, receta y nuevos estudios guardados con éxito.');
       } else {
         const res = await api.post('/api/consultas-independientes', { 
           paciente_id: pacienteId, 
@@ -163,6 +172,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
           medicamentos: listaMedicamentosValidos 
         });
         const nuevaConsultaId = res.data.id;
+        
         if (listaEstudiosValidos.length > 0 && nuevaConsultaId) {
           for (const est of listaEstudiosValidos) {
             await api.post('/api/estudios-clinicos', { 
@@ -178,7 +188,6 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
       setModoCrear(false);
       setModoEditar(false);
       setSubTab('historia'); 
-      setEstudiosNuevos([{ tipo_estudio: '', laboratorio: '', observaciones: '' }]); // Resetear lista temporal
       await cargarExpediente();
     } catch (err) {
       console.error(err);
