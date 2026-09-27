@@ -6,6 +6,7 @@ export default function MainLayout({
   setVistaActual, 
   nombreClinica, 
   onNuevaCita, 
+  onLogout,
   children 
 }) {
   return (
@@ -24,24 +25,23 @@ export default function MainLayout({
             </div>
           </div>
 
-          {/* Perfil Doctor & Botón Rápido */}
+          {/* Perfil Doctor */}
           <div className="p-4 flex flex-col items-center text-center border-b border-blue-900/30">
             <div className="w-14 h-14 rounded-full bg-slate-200 border-2 border-white/80 shadow-md flex items-center justify-center text-xl mb-1.5">
-              👨‍⚕️
+              👩‍⚕️
             </div>
             <span className="text-xs font-bold text-white leading-tight">
-              {nombreClinica || 'Consultorio Médico'}
+              {nombreClinica || 'CONSULTORIO MAYE'}
             </span>
             <span className="text-[11px] text-blue-200">Panel Principal</span>
-
-            
           </div>
 
           {/* Menú de Navegación */}
           <nav className="p-3 space-y-1.5 text-xs font-semibold">
             <button 
+              type="button"
               onClick={() => setVistaActual('catalogo')}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition ${
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition cursor-pointer ${
                 vistaActual === 'catalogo' 
                   ? 'bg-white/15 text-white font-bold shadow-inner' 
                   : 'text-slate-300 hover:bg-white/5 hover:text-white'
@@ -51,8 +51,9 @@ export default function MainLayout({
             </button>
 
             <button 
+              type="button"
               onClick={() => setVistaActual('agenda')}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition ${
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition cursor-pointer ${
                 vistaActual === 'agenda' 
                   ? 'bg-white/15 text-white font-bold shadow-inner' 
                   : 'text-slate-300 hover:bg-white/5 hover:text-white'
@@ -63,9 +64,19 @@ export default function MainLayout({
           </nav>
         </div>
 
-        {/* Footer Sidebar */}
-        <div className="p-4 border-t border-blue-900/40 text-[11px] text-slate-400 text-center">
-          SaaS Clínico v2.4
+        {/* Footer Sidebar con Cerrar Sesión */}
+        <div className="p-4 border-t border-blue-900/40 space-y-3">
+          <button
+            type="button"
+            onClick={onLogout}
+            className="w-full flex items-center justify-center gap-2 bg-rose-500/20 hover:bg-rose-600 text-rose-200 hover:text-white border border-rose-400/30 text-xs font-bold py-2.5 px-4 rounded-xl transition cursor-pointer shadow-xs"
+          >
+            🚪 Cerrar Sesión
+          </button>
+
+          <p className="text-[11px] text-slate-400 text-center font-mono">
+            SaaS Clínico v2.4
+          </p>
         </div>
       </aside>
 

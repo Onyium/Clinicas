@@ -307,19 +307,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
         <button onClick={onVolver} className="bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 cursor-pointer">
           ← Volver al Catálogo
         </button>
-        <button
-            type="button"
-            onClick={() => {
-              if (window.confirm('¿Deseas cerrar tu sesión?')) {
-                localStorage.clear();
-                window.location.reload(); // O llamar a tu función onLogout()
-              }
-            }}
-            className="bg-rose-500/20 hover:bg-rose-600 border border-rose-300/30 text-rose-100 hover:text-white text-xs font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 cursor-pointer"
-            title="Cerrar sesión actual"
-          >
-            🚪 Cerrar Sesión
-          </button>
+        
       </header>
 
       {/* ÁREA PRINCIPAL */}
