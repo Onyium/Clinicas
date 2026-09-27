@@ -1,14 +1,11 @@
-// src/components/expediente/HistorialConsultas.jsx
 import React from 'react';
-
-
 
 export default function HistorialConsultas({
   consultas,
   consultaSeleccionada,
   modoCrear,
   modoEditar,
-  seccionActiva, // 👈 AQUÍ FALTABA RECIBIRLO
+  seccionActiva,
   setConsultaSeleccionada,
   setModoCrear,
   setModoEditar,
@@ -16,7 +13,9 @@ export default function HistorialConsultas({
   setSubTab,
   setFormConsulta,
   setMedicamentos,
-  setEstudiosNuevos
+  setEstudiosNuevos,
+  paciente,       // 👈 RECIBIMOS EL PACIENTE
+  onAgendarCita   // 👈 RECIBIMOS LA FUNCIÓN DE AGENDAR
 }) {
   
   const iniciarNuevaConsulta = () => {
@@ -53,13 +52,30 @@ export default function HistorialConsultas({
   return (
     <aside className="w-72 bg-slate-50 flex flex-col shrink-0 overflow-y-auto p-4 space-y-4 border-l border-slate-200">
       <div className="space-y-2">
-        <button onClick={iniciarNuevaConsulta} className="w-full bg-[#10a37f] hover:bg-emerald-700 text-white font-bold text-xs p-2.5 rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer">
+        <button 
+          type="button"
+          onClick={iniciarNuevaConsulta} 
+          className="w-full bg-[#10a37f] hover:bg-emerald-700 text-white font-bold text-xs p-2.5 rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+        >
           ➕ Nueva Consulta
         </button>
+
+        {/* 👈 NUEVO BOTÓN PARA AGENDAR CITA */}
+        {onAgendarCita && (
+          <button 
+            type="button"
+            onClick={() => onAgendarCita(paciente)} 
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs p-2.5 rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            📅 Agendar Nueva Cita
+          </button>
+        )}
       </div>
       
       <div className="flex-1">
-        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">Historial ({consultas.length})</span>
+        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
+          Historial ({consultas.length})
+        </span>
         {consultas.length === 0 ? (
           <p className="text-xs text-slate-400 italic">No hay atenciones pasadas.</p>
         ) : (
@@ -68,7 +84,12 @@ export default function HistorialConsultas({
               const activa = seccionActiva === 'inicio' && !modoCrear && !modoEditar && consultaSeleccionada?.id === c.id;
               const fechaStr = c.fecha_formateada ? c.fecha_formateada.slice(0, 10) : (c.fecha ? String(c.fecha).slice(0, 10) : 'Fecha');
               return (
-                <button key={c.id} onClick={() => seleccionarConsulta(c)} className={`w-full text-left p-3 rounded-xl border text-xs transition cursor-pointer flex flex-col gap-1 ${activa ? 'bg-[#1b4e7b] border-[#1b4e7b] text-white font-bold shadow-xs' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'}`}>
+                <button 
+                  key={c.id} 
+                  type="button"
+                  onClick={() => seleccionarConsulta(c)} 
+                  className={`w-full text-left p-3 rounded-xl border text-xs transition cursor-pointer flex flex-col gap-1 ${activa ? 'bg-[#1b4e7b] border-[#1b4e7b] text-white font-bold shadow-xs' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'}`}
+                >
                   <span className={`text-xs font-bold ${activa ? 'text-white' : 'text-slate-800'}`}>📅 {fechaStr}</span>
                   <span className={`block text-[11px] truncate mt-0.5 ${activa ? 'text-blue-100' : 'text-slate-500'}`}>{c.doctor_nombre}</span>
                   {c.diagnostico && (<span className={`block text-[10px] truncate italic ${activa ? 'text-blue-100' : 'text-blue-600'}`}>Dx: {c.diagnostico}</span>)}

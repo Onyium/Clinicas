@@ -671,7 +671,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
           consultaSeleccionada={consultaSeleccionada}
           modoCrear={modoCrear}
           modoEditar={modoEditar}
-          seccionActiva={seccionActiva} 
+          seccionActiva={seccionActiva}
           setConsultaSeleccionada={setConsultaSeleccionada}
           setModoCrear={setModoCrear}
           setModoEditar={setModoEditar}
@@ -680,6 +680,8 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
           setFormConsulta={setFormConsulta}
           setMedicamentos={setMedicamentos}
           setEstudiosNuevos={setEstudiosNuevos}
+          paciente={paciente}           
+          onAgendarCita={onAgendarCita}
         />
 
       </div>
