@@ -296,8 +296,11 @@ export default function LaboratorioTab({
             window.onload = function() {
               setTimeout(function() {
                 window.print();
-                window.close();
-              }, 400);
+              }, 300);
+            };
+
+            window.onafterprint = function() {
+              window.close();
             };
           </script>
         </body>
