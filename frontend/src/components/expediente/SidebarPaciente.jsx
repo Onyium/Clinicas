@@ -10,12 +10,12 @@ export default function SidebarPaciente({
   setModoCrear, 
   setModoEditar,
   citasCount,
-  onEliminarExpediente // 👈 Recibimos la función de eliminar
+  onEliminarExpediente
 }) {
   return (
-    <aside className="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0 overflow-y-auto justify-between">
+    <aside className="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 h-full overflow-y-auto">
       <div>
-        {/* Cabecera y Foto del Paciente */}
+        {/* Cabecera y Foto */}
         <div className="p-4 flex flex-col items-center text-center border-b border-slate-100">
           {paciente.foto_url ? (
             <img 
@@ -51,7 +51,7 @@ export default function SidebarPaciente({
           )}
 
           <span className="text-xs text-blue-600 font-mono font-bold mt-2">Folio: #{String(paciente.id || 0).padStart(4, '0')}</span>
-          <span className="text-xs text-slate-500 font-mono mt-0.5">📞 {paciente.telefono || 'Sin teléfono'}</span>
+          <span className="text-xs text-slate-500 font-mono mt-0.5">📞 {paciente.telefono || '00000'}</span>
           
           {paciente.alergias && paciente.alergias.toLowerCase() !== 'ninguna' && (
             <div className="mt-3 w-full bg-rose-600 text-white text-[11px] font-bold py-1 px-2 rounded-lg shadow-xs uppercase tracking-wider">
@@ -60,48 +60,49 @@ export default function SidebarPaciente({
           )}
         </div>
 
-        {/* Menú de Navegación del Expediente */}
-        <nav className="p-2 space-y-1 text-xs font-semibold">
+        {/* Menú de Navegación */}
+        <nav className="p-3 space-y-1.5 text-xs font-semibold">
           <button 
             type="button"
             onClick={() => { setSeccionActiva('inicio'); setModoCrear(false); setModoEditar(false); }} 
-            className={`w-full text-left px-3 py-2.5 rounded-xl transition cursor-pointer ${seccionActiva === 'inicio' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
+            className={`w-full flex items-center gap-2 text-left px-3 py-2.5 rounded-xl transition cursor-pointer ${
+              seccionActiva === 'inicio' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'
+            }`}
           >
             🩺 Historial de Consultas
           </button>
+          
           <button 
             type="button"
             onClick={() => setSeccionActiva('citas')} 
-            className={`w-full text-left px-3 py-2.5 rounded-xl transition cursor-pointer ${seccionActiva === 'citas' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
+            className={`w-full flex items-center gap-2 text-left px-3 py-2.5 rounded-xl transition cursor-pointer ${
+              seccionActiva === 'citas' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'
+            }`}
           >
-            📅 Citas Agendadas ({citasCount})
+            📅 Citas Agendadas ({citasCount || 0})
           </button>
+          
           <button 
             type="button"
             onClick={() => setSeccionActiva('general')} 
-            className={`w-full text-left px-3 py-2.5 rounded-xl transition cursor-pointer ${seccionActiva === 'general' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
+            className={`w-full flex items-center gap-2 text-left px-3 py-2.5 rounded-xl transition cursor-pointer ${
+              seccionActiva === 'general' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'
+            }`}
           >
             📋 Datos Generales / Ficha
           </button>
         </nav>
       </div>
 
-      {/* Pie de la barra lateral: Antecedentes base y Botón Eliminar Expediente */}
-      <div className="p-4 border-t border-slate-100 text-xs text-slate-500 space-y-2 mt-auto">
-        <span className="font-bold text-[10px] text-slate-400 uppercase tracking-wider block">Antecedentes Base</span>
-        <p className="text-[11px] bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-slate-600 max-h-20 overflow-y-auto">
-          {paciente.antecedentes || 'Sin antecedentes registrados.'}
-        </p>
-        
-        <div className="pt-2">
-          <button 
-            type="button"
-            onClick={onEliminarExpediente} 
-            className="w-full bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-200 hover:border-rose-600 text-xs font-bold py-2 px-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
-          >
-            🗑️ Eliminar Expediente
-          </button>
-        </div>
+      {/* PIE DEL SIDEBAR: BOTÓN VISIBLE DIRECTO */}
+      <div className="p-4 border-t border-slate-100 bg-slate-50/50">
+        <button 
+          type="button"
+          onClick={onEliminarExpediente} 
+          className="w-full bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-200 hover:border-rose-600 text-xs font-bold py-2.5 px-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
+        >
+          🗑️ Eliminar Expediente
+        </button>
       </div>
     </aside>
   );
