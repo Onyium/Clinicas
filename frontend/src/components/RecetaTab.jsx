@@ -202,12 +202,20 @@ export default function RecetaTab({
             </div>
 
           </div>
+
+          <!-- SCRIPT INYECTADO PARA NO CONGELAR REACT -->
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                window.close();
+              }, 400);
+            };
+          </script>
         </body>
       </html>
     `);
     ventana.document.close();
-    ventana.focus();
-    setTimeout(() => ventana.print(), 500);
   };
 
   return (

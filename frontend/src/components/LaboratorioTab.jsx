@@ -290,12 +290,20 @@ export default function LaboratorioTab({
             </div>
 
           </div>
+
+          <!-- SCRIPT INYECTADO PARA NO CONGELAR REACT -->
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                window.close();
+              }, 400);
+            };
+          </script>
         </body>
       </html>
     `);
     ventanaImpresion.document.close();
-    ventanaImpresion.focus();
-    setTimeout(() => ventanaImpresion.print(), 500);
   };
 
   // VISTA ACTIVA AL CREAR O EDITAR LA CONSULTA
