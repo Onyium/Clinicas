@@ -7,6 +7,7 @@ import LaboratorioTab from './LaboratorioTab';
 import SidebarPaciente from './expediente/SidebarPaciente';
 import FormularioGeneral from './expediente/FormularioGeneral';
 import HistorialConsultas from './expediente/HistorialConsultas';
+import DocumentosTab from './expediente/DocumentosTab';
 
 function calcularEdadDesdeFecha(fechaNacimiento) {
   if (!fechaNacimiento) return '';
@@ -343,6 +344,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
               <button onClick={() => setSubTab('historia')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${subTab === 'historia' ? 'bg-white border border-slate-200 text-blue-700 shadow-sm' : 'text-slate-500 hover:bg-slate-200/50'}`}>📝 Historia Clínica</button>
               <button onClick={() => setSubTab('receta')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${subTab === 'receta' ? 'bg-white border border-slate-200 text-blue-700 shadow-sm' : 'text-slate-500 hover:bg-slate-200/50'}`}>💊 Prescripción / Receta</button>
               <button onClick={() => setSubTab('laboratorio')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${subTab === 'laboratorio' ? 'bg-white border border-slate-200 text-blue-700 shadow-sm' : 'text-slate-500 hover:bg-slate-200/50'}`}>🧪 Exámenes / Laboratorio</button>
+              <button onClick={() => setSubTab('documentos')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors whitespace-nowrap ${subTab === 'documentos' ? 'bg-white border border-slate-200 text-blue-700 shadow-sm' : 'text-slate-500 hover:bg-slate-200/50'}`}>📄 Certificados / Docs</button>
             </div>
           )}
 
@@ -476,6 +478,13 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                       setMostrarModalEstudio={setMostrarModalEstudio} 
                       handleEliminarEstudio={handleEliminarEstudio}
                       onRecargar={cargarExpediente}
+                    />
+                      
+                  )}
+                  {subTab === 'documentos' && (
+                    <DocumentosTab 
+                      paciente={{ ...paciente, ...formGeneral }} 
+                      consultaSeleccionada={consultaSeleccionada || formConsulta} 
                     />
                   )}
                 </form>
