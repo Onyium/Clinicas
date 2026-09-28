@@ -448,6 +448,67 @@ app.get('/api/pacientes', async (req, res) => {
   }
 });
 
+app.put('/api/pacientes/:id', async (req, res) => {
+  const { id } = req.params;
+  const {
+    nombre,
+    telefono,
+    fecha_nacimiento,
+    sexo,
+    alergias,
+    antecedentes,
+    contacto_emergencia,
+    telefono_emergencia,
+    foto_url,
+    responsable_nombre,
+    responsable_parentesco,
+    responsable_telefono
+  } = req.body;
+
+  try {
+    const [result] = await pool.query(
+      `UPDATE pacientes SET 
+        nombre = ?,
+        telefono = ?,
+        fecha_nacimiento = ?,
+        sexo = ?,
+        alergias = ?,
+        antecedentes = ?,
+        contacto_emergencia = ?,
+        telefono_emergencia = ?,
+        foto_url = ?,
+        responsable_nombre = ?,
+        responsable_parentesco = ?,
+        responsable_telefono = ?
+      WHERE id = ?`,
+      [
+        nombre,
+        telefono || null,
+        fecha_nacimiento || null,
+        sexo || 'Otro',
+        alergias || null,
+        antecedentes || null,
+        contacto_emergencia || null,
+        telefono_emergencia || null,
+        foto_url || null,
+        responsable_nombre || null,
+        responsable_parentesco || null,
+        responsable_telefono || null,
+        id
+      ]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Paciente no encontrado' });
+    }
+
+    res.json({ ok: true, mensaje: 'Ficha médica actualizada exitosamente' });
+  } catch (err) {
+    console.error('Error al actualizar paciente:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/pacientes', async (req, res) => {
   const usuarioId = req.headers['x-usuario-id'] || 1;
   // Añadimos responsable_nombre y responsable_parentesco a la desestructuración
