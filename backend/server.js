@@ -14,7 +14,7 @@ import {
   enviarRecordatorioPorCita
 } from './whatsapp.js';
 
-// 👇 CAMBIO AQUÍ: Usamos import en lugar de require
+// Usamos import en lugar de require
 import { v2 as cloudinary } from 'cloudinary';
 import multer from 'multer';
 import os from 'os';
@@ -118,16 +118,19 @@ app.put('/api/configuracion', async (req, res) => {
     logo_url, 
     hora_apertura, 
     hora_cierre, 
-    duracion_defecto_minutos 
+    duracion_defecto_minutos,
+    jvpm,
+    horario_atencion,
+    nombre_doctor
   } = req.body;
 
   try {
     await pool.query(`
       INSERT INTO configuracion (
         id, nombre_clinica, eslogan, telefono_clinica, direccion, logo_url, 
-        hora_apertura, hora_cierre, duracion_defecto_minutos
+        hora_apertura, hora_cierre, duracion_defecto_minutos, jvpm, horario_atencion, nombre_doctor
       ) VALUES (
-        1, ?, ?, ?, ?, ?, ?, ?, ?
+        1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       )
       ON DUPLICATE KEY UPDATE
         nombre_clinica = VALUES(nombre_clinica),
@@ -137,7 +140,10 @@ app.put('/api/configuracion', async (req, res) => {
         logo_url = VALUES(logo_url),
         hora_apertura = VALUES(hora_apertura),
         hora_cierre = VALUES(hora_cierre),
-        duracion_defecto_minutos = VALUES(duracion_defecto_minutos)
+        duracion_defecto_minutos = VALUES(duracion_defecto_minutos),
+        jvpm = VALUES(jvpm),
+        horario_atencion = VALUES(horario_atencion),
+        nombre_doctor = VALUES(nombre_doctor)
     `, [
       nombre_clinica || 'Consultorio Médico',
       eslogan || null,
@@ -146,7 +152,10 @@ app.put('/api/configuracion', async (req, res) => {
       logo_url || null,
       hora_apertura ? (hora_apertura.length === 5 ? `${hora_apertura}:00` : hora_apertura) : '08:00:00',
       hora_cierre ? (hora_cierre.length === 5 ? `${hora_cierre}:00` : hora_cierre) : '17:00:00',
-      parseInt(duracion_defecto_minutos, 10) || 30
+      parseInt(duracion_defecto_minutos, 10) || 30,
+      jvpm || null,
+      horario_atencion || null,
+      nombre_doctor || null
     ]);
 
     res.json({ ok: true, mensaje: 'Configuración guardada exitosamente' });
@@ -441,6 +450,7 @@ app.get('/api/pacientes', async (req, res) => {
 
 app.post('/api/pacientes', async (req, res) => {
   const usuarioId = req.headers['x-usuario-id'] || 1;
+  // Añadimos responsable_nombre y responsable_parentesco a la desestructuración
   const { nombre, telefono, fecha_nacimiento, sexo, alergias, antecedentes, responsable_nombre, responsable_parentesco } = req.body;
   
   try {
@@ -478,7 +488,77 @@ app.delete('/api/pacientes/:id', async (req, res) => {
 });
 
 // ==========================================
-// CONSULTAS MÉDICAS (CON SIGNOS VITALES)
+// EXPEDIENTE DETALLADO
+// ==========================================
+app.get('/api/pacientes/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const [pacienteRows] = await pool.query('SELECT * FROM pacientes WHERE id = ?', [id]);
+    if (pacienteRows.length === 0) {
+      return res.status(404).json({ error: 'Paciente no encontrado' });
+    }
+    const paciente = pacienteRows[0];
+
+    // Añadida la frecuencia_cardiaca a la extracción de datos
+    const [consultas] = await pool.query(
+      `SELECT id, DATE_FORMAT(fecha, '%Y-%m-%d %H:%i') as fecha_formateada, 
+              doctor_nombre, motivo_consulta, enfermedad_actual, 
+              antecedentes_patologicos, examen_fisico, reporte_examenes, 
+              diagnostico, plan_tratamiento, peso, talla, temperatura, presion_arterial, frecuencia_cardiaca, fecha
+       FROM consultas_medicas 
+       WHERE paciente_id = ? 
+       ORDER BY fecha DESC`,
+      [id]
+    );
+
+    const [recetas] = await pool.query(
+      `SELECT * FROM recetas_medicamentos 
+       WHERE paciente_id = ? 
+       ORDER BY id DESC`,
+      [id]
+    );
+
+    const [estudios] = await pool.query(
+      `SELECT * FROM estudios_clinicos 
+       WHERE paciente_id = ? 
+       ORDER BY id DESC`,
+      [id]
+    );
+
+    const recetasConSeguimiento = [];
+    for (const r of recetas) {
+      const [tomas] = await pool.query(
+        `SELECT DATE_FORMAT(fecha_toma, '%Y-%m-%d') as fecha, hora_confirmacion 
+         FROM tomas_medicamentos 
+         WHERE receta_id = ? 
+         ORDER BY fecha_toma ASC`,
+        [r.id]
+      );
+      const porcentaje = Math.min(100, Math.round((tomas.length / r.dias_tratamiento) * 100));
+
+      recetasConSeguimiento.push({
+        ...r,
+        tomas_realizadas: tomas.length,
+        porcentaje_cumplimiento: porcentaje,
+        historial: tomas
+      });
+    }
+
+    res.json({
+      paciente,
+      consultas,
+      tratamientos: recetasConSeguimiento,
+      estudios
+    });
+  } catch (error) {
+    console.error('Error al obtener expediente:', error);
+    res.status(500).json({ error: 'Error al cargar expediente' });
+  }
+});
+
+// ==========================================
+// CONSULTAS MÉDICAS (CON SIGNOS VITALES COMPLETOS)
 // ==========================================
 app.post('/api/consultas-independientes', async (req, res) => {
   const {
@@ -565,65 +645,6 @@ app.post('/api/consultas-independientes', async (req, res) => {
   }
 });
 
-// ==========================================
-// CONFIGURACIÓN DE LA CLÍNICA
-// ==========================================
-app.put('/api/configuracion', async (req, res) => {
-  const { 
-    nombre_clinica, 
-    eslogan, 
-    telefono_clinica, 
-    direccion, 
-    logo_url, 
-    hora_apertura, 
-    hora_cierre, 
-    duracion_defecto_minutos,
-    jvpm,
-    horario_atencion,
-    nombre_doctor
-  } = req.body;
-
-  try {
-    await pool.query(`
-      INSERT INTO configuracion (
-        id, nombre_clinica, eslogan, telefono_clinica, direccion, logo_url, 
-        hora_apertura, hora_cierre, duracion_defecto_minutos, jvpm, horario_atencion, nombre_doctor
-      ) VALUES (
-        1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-      )
-      ON DUPLICATE KEY UPDATE
-        nombre_clinica = VALUES(nombre_clinica),
-        eslogan = VALUES(eslogan),
-        telefono_clinica = VALUES(telefono_clinica),
-        direccion = VALUES(direccion),
-        logo_url = VALUES(logo_url),
-        hora_apertura = VALUES(hora_apertura),
-        hora_cierre = VALUES(hora_cierre),
-        duracion_defecto_minutos = VALUES(duracion_defecto_minutos),
-        jvpm = VALUES(jvpm),
-        horario_atencion = VALUES(horario_atencion),
-        nombre_doctor = VALUES(nombre_doctor)
-    `, [
-      nombre_clinica || 'Consultorio Médico',
-      eslogan || null,
-      telefono_clinica || null,
-      direccion || null,
-      logo_url || null,
-      hora_apertura ? (hora_apertura.length === 5 ? `${hora_apertura}:00` : hora_apertura) : '08:00:00',
-      hora_cierre ? (hora_cierre.length === 5 ? `${hora_cierre}:00` : hora_cierre) : '17:00:00',
-      parseInt(duracion_defecto_minutos, 10) || 30,
-      jvpm || null,
-      horario_atencion || null,
-      nombre_doctor || null
-    ]);
-
-    res.json({ ok: true, mensaje: 'Configuración guardada exitosamente' });
-  } catch (err) {
-    console.error('Error detallado en configuracion:', err);
-    res.status(500).json({ error: err.message });
-  }
-});;
-
 app.delete('/api/consultas-independientes/:id', async (req, res) => {
   const { id } = req.params;
   try {
@@ -634,75 +655,6 @@ app.delete('/api/consultas-independientes/:id', async (req, res) => {
   } catch (err) {
     console.error('Error al eliminar consulta:', err);
     res.status(500).json({ error: err.message });
-  }
-});
-
-// ==========================================
-// EXPEDIENTE DETALLADO
-// ==========================================
-app.get('/api/pacientes/:id', async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const [pacienteRows] = await pool.query('SELECT * FROM pacientes WHERE id = ?', [id]);
-    if (pacienteRows.length === 0) {
-      return res.status(404).json({ error: 'Paciente no encontrado' });
-    }
-    const paciente = pacienteRows[0];
-
-    const [consultas] = await pool.query(
-      `SELECT id, DATE_FORMAT(fecha, '%Y-%m-%d %H:%i') as fecha_formateada, 
-              doctor_nombre, motivo_consulta, enfermedad_actual, 
-              antecedentes_patologicos, examen_fisico, reporte_examenes, 
-              diagnostico, plan_tratamiento, peso, talla, temperatura, presion_arterial, fecha,responsable_nombre, responsable_parentesco
-       FROM consultas_medicas 
-       WHERE paciente_id = ? 
-       ORDER BY fecha DESC`,
-      [id]
-    );
-
-    const [recetas] = await pool.query(
-      `SELECT * FROM recetas_medicamentos 
-       WHERE paciente_id = ? 
-       ORDER BY id DESC`,
-      [id]
-    );
-
-    const [estudios] = await pool.query(
-      `SELECT * FROM estudios_clinicos 
-       WHERE paciente_id = ? 
-       ORDER BY id DESC`,
-      [id]
-    );
-
-    const recetasConSeguimiento = [];
-    for (const r of recetas) {
-      const [tomas] = await pool.query(
-        `SELECT DATE_FORMAT(fecha_toma, '%Y-%m-%d') as fecha, hora_confirmacion 
-         FROM tomas_medicamentos 
-         WHERE receta_id = ? 
-         ORDER BY fecha_toma ASC`,
-        [r.id]
-      );
-      const porcentaje = Math.min(100, Math.round((tomas.length / r.dias_tratamiento) * 100));
-
-      recetasConSeguimiento.push({
-        ...r,
-        tomas_realizadas: tomas.length,
-        porcentaje_cumplimiento: porcentaje,
-        historial: tomas
-      });
-    }
-
-    res.json({
-      paciente,
-      consultas,
-      tratamientos: recetasConSeguimiento,
-      estudios
-    });
-  } catch (error) {
-    console.error('Error al obtener expediente:', error);
-    res.status(500).json({ error: 'Error al cargar expediente' });
   }
 });
 
@@ -772,6 +724,7 @@ app.put('/api/estudios-clinicos/:id/resultado', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor backend escuchando en http://localhost:${PORT}`);
