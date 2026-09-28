@@ -54,7 +54,8 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
     peso: '',
     talla: '',
     temperatura: '',
-    presion_arterial: ''
+    presion_arterial: '',
+    frecuencia_cardiaca: '' // 👈 Agregado al estado inicial
   });
 
   const [medicamentos, setMedicamentos] = useState([{ medicamento: '', frecuencia: 'Cada 8 horas', dias_tratamiento: 5, indicacion: '' }]);
@@ -229,7 +230,8 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
       peso: consultaSeleccionada.peso || '',
       talla: consultaSeleccionada.talla || '',
       temperatura: consultaSeleccionada.temperatura || '',
-      presion_arterial: consultaSeleccionada.presion_arterial || ''
+      presion_arterial: consultaSeleccionada.presion_arterial || '',
+      frecuencia_cardiaca: consultaSeleccionada.frecuencia_cardiaca || '' // 👈 Agregado para edición
     });
 
     const recs = tratamientos.filter(t => t.consulta_id === consultaSeleccionada.id);
@@ -242,7 +244,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
     const ests = estudios.filter(e => e.consulta_id === consultaSeleccionada.id);
     if (ests.length > 0) {
       setEstudiosNuevos(ests.map(e => ({ 
-        id: e.id, // 👈 ¡ESTE ES EL CANDADO! Conservar el ID original
+        id: e.id, 
         tipo_estudio: e.tipo_estudio || '', 
         laboratorio: e.laboratorio || '', 
         observaciones: e.observaciones || '' 
@@ -361,9 +363,9 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                         <span className="text-[11px] font-black text-slate-700 uppercase tracking-wider block mb-2">
                           🩺 Signos Vitales de la Consulta
                         </span>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                           <div>
-                            <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Peso (kg / lb)</label>
+                            <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Peso (kg/lb)</label>
                             <input 
                               type="text" 
                               placeholder="ej. 68 kg" 
@@ -384,7 +386,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                           </div>
 
                           <div>
-                            <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Temperatura (°C)</label>
+                            <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Temp. (°C)</label>
                             <input 
                               type="text" 
                               placeholder="ej. 36.5 °C" 
@@ -393,18 +395,19 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                               className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs outline-none focus:ring-1 focus:ring-blue-500 font-semibold text-rose-600" 
                             />
                           </div>
+                          {/* 👈 INPUT FRECUENCIA CARDÍACA */}
                           <div>
-                            <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Frecuencia Cardíaca</label>
+                            <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">F. Cardíaca</label>
                             <input 
                               type="text" 
                               placeholder="Ej. 80 lpm" 
                               value={formConsulta.frecuencia_cardiaca || ''} 
                               onChange={e => setFormConsulta({...formConsulta, frecuencia_cardiaca: e.target.value})} 
-                              className="w-full border border-slate-300 rounded-lg p-2 text-xs outline-none focus:border-blue-500" 
+                              className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs outline-none focus:ring-1 focus:ring-blue-500" 
                             />
                           </div>
                           <div>
-                            <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Presión Arterial</label>
+                            <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">P. Arterial</label>
                             <input 
                               type="text" 
                               placeholder="ej. 120/80 mmHg" 
@@ -535,6 +538,8 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                           <div><span className="font-bold text-blue-900">Peso:</span> {consultaSeleccionada.peso || '---'}</div>
                           <div><span className="font-bold text-blue-900">Talla:</span> {consultaSeleccionada.talla || '---'}</div>
                           <div><span className="font-bold text-rose-600">🌡️ Temp:</span> {consultaSeleccionada.temperatura || '---'}</div>
+                          {/* 👈 F.C. REGISTRADA AQUÍ */}
+                          <div><span className="font-bold text-rose-600">❤️ F.C.:</span> {consultaSeleccionada.frecuencia_cardiaca || '---'}</div>
                           <div><span className="font-bold text-blue-900">P.A.:</span> {consultaSeleccionada.presion_arterial || '---'}</div>
                         </div>
 
@@ -603,6 +608,12 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                         setMostrarModalEstudio={setMostrarModalEstudio} 
                         handleEliminarEstudio={handleEliminarEstudio} 
                         onRecargar={cargarExpediente}
+                      />
+                    )}
+                    {subTab === 'documentos' && (
+                      <DocumentosTab 
+                        paciente={{ ...paciente, ...formGeneral }} 
+                        consultaSeleccionada={consultaSeleccionada || formConsulta} 
                       />
                     )}
                   </div>
@@ -700,7 +711,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
           setFormConsulta={setFormConsulta}
           setMedicamentos={setMedicamentos}
           setEstudiosNuevos={setEstudiosNuevos}
-          paciente={paciente}           
+          paciente={paciente}          
           onAgendarCita={onAgendarCita}
         />
 
