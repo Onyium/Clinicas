@@ -39,34 +39,17 @@ export default function SidebarPaciente({
             </span>
           </div>
 
-          {/* Debajo de la fecha de nacimiento u otros campos del paciente en la Ficha General */}
+          {/* Tarjeta informativa del tutor para la barra lateral (sin inputs) */}
           {esMenorDeEdad && (
-            <div className="md:col-span-2 bg-amber-50 p-4 rounded-xl border border-amber-200 mt-2">
-              <h4 className="text-xs font-bold text-amber-800 uppercase mb-3 flex items-center gap-2">
-                👶 Datos del Tutor Legal (Requerido)
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[11px] font-bold text-amber-700 uppercase block mb-1">Nombre Completo del Responsable</label>
-                  <input 
-                    type="text" 
-                    value={formGeneral.responsable_nombre || ''} 
-                    onChange={e => setFormGeneral({...formGeneral, responsable_nombre: e.target.value})} 
-                    className="w-full border border-amber-300 rounded-lg p-2 text-xs outline-none focus:border-amber-500 bg-white" 
-                    placeholder="Nombre del padre, madre o tutor" 
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] font-bold text-amber-700 uppercase block mb-1">Parentesco</label>
-                  <input 
-                    type="text" 
-                    value={formGeneral.responsable_parentesco || ''} 
-                    onChange={e => setFormGeneral({...formGeneral, responsable_parentesco: e.target.value})} 
-                    className="w-full border border-amber-300 rounded-lg p-2 text-xs outline-none focus:border-amber-500 bg-white" 
-                    placeholder="Ej. Madre, Padre, Abuelo" 
-                  />
-                </div>
-              </div>
+            <div className="mt-2 w-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold p-2 rounded-lg text-left">
+              👶 <strong>Menor de edad</strong>
+              {paciente.responsable_nombre ? (
+                <span className="block font-normal mt-0.5 text-amber-900">
+                  Tutor ({paciente.responsable_parentesco || 'Responsable'}): <strong className="block truncate">{paciente.responsable_nombre}</strong>
+                </span>
+              ) : (
+                <span className="block font-normal text-rose-600 mt-0.5">Requiere registrar tutor en Ficha</span>
+              )}
             </div>
           )}
 
@@ -114,7 +97,7 @@ export default function SidebarPaciente({
         </nav>
       </div>
 
-      {/* PIE DEL SIDEBAR: BOTÓN VISIBLE DIRECTO */}
+      {/* PIE DEL SIDEBAR: BOTÓN ELIMINAR EXPEDIENTE */}
       <div className="p-4 border-t border-slate-100 bg-slate-50/50">
         <button 
           type="button"
