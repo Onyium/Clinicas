@@ -454,6 +454,7 @@ app.get('/api/pacientes', async (req, res) => {
 app.post('/api/pacientes', async (req, res) => {
   const usuarioId = req.headers['x-usuario-id'] || 1;
   const { 
+    id, // 👈 Si viene id, se redirige a UPDATE para evitar duplicados
     nombre, 
     telefono, 
     fecha_nacimiento, 
@@ -469,6 +470,41 @@ app.post('/api/pacientes', async (req, res) => {
   } = req.body;
   
   try {
+    if (id) {
+      await pool.query(
+        `UPDATE pacientes SET 
+          nombre = ?,
+          telefono = ?,
+          fecha_nacimiento = ?,
+          sexo = ?,
+          alergias = ?,
+          antecedentes = ?,
+          contacto_emergencia = ?,
+          telefono_emergencia = ?,
+          foto_url = ?,
+          responsable_nombre = ?,
+          responsable_parentesco = ?,
+          responsable_telefono = ?
+        WHERE id = ?`,
+        [
+          nombre,
+          telefono || null,
+          fecha_nacimiento || null,
+          sexo || 'Otro',
+          alergias || null,
+          antecedentes || null,
+          contacto_emergencia || null,
+          telefono_emergencia || null,
+          foto_url || null,
+          responsable_nombre || null,
+          responsable_parentesco || null,
+          responsable_telefono || null,
+          id
+        ]
+      );
+      return res.json({ ok: true, id, mensaje: 'Paciente actualizado exitosamente' });
+    }
+
     const [result] = await pool.query(
       `INSERT INTO pacientes (
         usuario_id, nombre, telefono, fecha_nacimiento, sexo, alergias, 

@@ -261,10 +261,12 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
     e.preventDefault();
     setGuardandoGeneral(true);
     try { 
-      await api.post('/api/pacientes', { id: pacienteId, ...formGeneral }); 
+      // 👇 Cambiamos api.post por api.put apuntando a /api/pacientes/:id
+      await api.put(`/api/pacientes/${pacienteId}`, formGeneral); 
       alert('✅ Ficha médica actualizada con éxito.'); 
       await cargarExpediente(); 
     } catch (err) { 
+      console.error(err);
       alert('Error al guardar datos generales'); 
     } finally { 
       setGuardandoGeneral(false); 
