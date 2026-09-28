@@ -382,6 +382,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                               className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs outline-none focus:ring-1 focus:ring-blue-500" 
                             />
                           </div>
+
                           <div>
                             <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Temperatura (°C)</label>
                             <input 
@@ -390,6 +391,16 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                               value={formConsulta.temperatura} 
                               onChange={(e) => setFormConsulta({...formConsulta, temperatura: e.target.value})} 
                               className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs outline-none focus:ring-1 focus:ring-blue-500 font-semibold text-rose-600" 
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Frecuencia Cardíaca</label>
+                            <input 
+                              type="text" 
+                              placeholder="Ej. 80 lpm" 
+                              value={formConsulta.frecuencia_cardiaca || ''} 
+                              onChange={e => setFormConsulta({...formConsulta, frecuencia_cardiaca: e.target.value})} 
+                              className="w-full border border-slate-300 rounded-lg p-2 text-xs outline-none focus:border-blue-500" 
                             />
                           </div>
                           <div>

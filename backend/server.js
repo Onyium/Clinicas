@@ -441,13 +441,13 @@ app.get('/api/pacientes', async (req, res) => {
 
 app.post('/api/pacientes', async (req, res) => {
   const usuarioId = req.headers['x-usuario-id'] || 1;
-  const { nombre, telefono, fecha_nacimiento, sexo, alergias, antecedentes } = req.body;
+  const { nombre, telefono, fecha_nacimiento, sexo, alergias, antecedentes, responsable_nombre, responsable_parentesco } = req.body;
   
   try {
     const [result] = await pool.query(
-      `INSERT INTO pacientes (usuario_id, nombre, telefono, fecha_nacimiento, sexo, alergias, antecedentes)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [usuarioId, nombre, telefono, fecha_nacimiento || null, sexo || 'Otro', alergias || null, antecedentes || null]
+      `INSERT INTO pacientes (usuario_id, nombre, telefono, fecha_nacimiento, sexo, alergias, antecedentes, responsable_nombre, responsable_parentesco)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [usuarioId, nombre, telefono, fecha_nacimiento || null, sexo || 'Otro', alergias || null, antecedentes || null, responsable_nombre || null, responsable_parentesco || null]
     );
     res.json({ ok: true, id: result.insertId });
   } catch (err) {
@@ -495,7 +495,8 @@ app.post('/api/consultas-independientes', async (req, res) => {
     talla,
     temperatura,
     presion_arterial,
-    medicamentos
+    medicamentos,
+    frecuencia_cardiaca
   } = req.body;
 
   if (!paciente_id) {
@@ -505,8 +506,8 @@ app.post('/api/consultas-independientes', async (req, res) => {
   try {
     const [result] = await pool.query(
       `INSERT INTO consultas_medicas 
-       (paciente_id, doctor_nombre, motivo_consulta, enfermedad_actual, antecedentes_patologicos, examen_fisico, reporte_examenes, diagnostico, plan_tratamiento, peso, talla, temperatura, presion_arterial)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (paciente_id, doctor_nombre, motivo_consulta, enfermedad_actual, antecedentes_patologicos, examen_fisico, reporte_examenes, diagnostico, plan_tratamiento, peso, talla, temperatura, presion_arterial, frecuencia_cardiaca)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         paciente_id,
         doctor_nombre || 'Dr(a). Consulta',
@@ -520,7 +521,8 @@ app.post('/api/consultas-independientes', async (req, res) => {
         peso || null,
         talla || null,
         temperatura || null,
-        presion_arterial || null
+        presion_arterial || null,
+        frecuencia_cardiaca || null
       ]
     );
 
@@ -652,7 +654,7 @@ app.get('/api/pacientes/:id', async (req, res) => {
       `SELECT id, DATE_FORMAT(fecha, '%Y-%m-%d %H:%i') as fecha_formateada, 
               doctor_nombre, motivo_consulta, enfermedad_actual, 
               antecedentes_patologicos, examen_fisico, reporte_examenes, 
-              diagnostico, plan_tratamiento, peso, talla, temperatura, presion_arterial, fecha
+              diagnostico, plan_tratamiento, peso, talla, temperatura, presion_arterial, fecha,responsable_nombre, responsable_parentesco
        FROM consultas_medicas 
        WHERE paciente_id = ? 
        ORDER BY fecha DESC`,

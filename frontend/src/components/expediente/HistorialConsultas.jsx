@@ -35,7 +35,8 @@ export default function HistorialConsultas({
       peso: '', 
       talla: '', 
       temperatura: '', 
-      presion_arterial: '' 
+      presion_arterial: '',
+      frecuencia_cardiaca: ''
     }); 
     setMedicamentos([{ medicamento: '', frecuencia: 'Cada 8 horas', dias_tratamiento: 5, indicacion: '' }]); 
     setEstudiosNuevos([{ tipo_estudio: '', laboratorio: '', observaciones: '' }]);
