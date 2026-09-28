@@ -432,6 +432,9 @@ app.post('/api/recetas/multiple', async (req, res) => {
 // ==========================================
 // MÓDULO DE PACIENTES Y EXPEDIENTES
 // ==========================================
+// ==========================================
+// MÓDULO DE PACIENTES Y EXPEDIENTES
+// ==========================================
 app.get('/api/pacientes', async (req, res) => {
   const usuarioId = req.headers['x-usuario-id'] || 1;
   const q = req.query.q || '';
@@ -444,6 +447,53 @@ app.get('/api/pacientes', async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/pacientes', async (req, res) => {
+  const usuarioId = req.headers['x-usuario-id'] || 1;
+  const { 
+    nombre, 
+    telefono, 
+    fecha_nacimiento, 
+    sexo, 
+    alergias, 
+    antecedentes, 
+    contacto_emergencia,
+    telefono_emergencia,
+    foto_url,
+    responsable_nombre, 
+    responsable_parentesco,
+    responsable_telefono
+  } = req.body;
+  
+  try {
+    const [result] = await pool.query(
+      `INSERT INTO pacientes (
+        usuario_id, nombre, telefono, fecha_nacimiento, sexo, alergias, 
+        antecedentes, contacto_emergencia, telefono_emergencia, foto_url,
+        responsable_nombre, responsable_parentesco, responsable_telefono
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        usuarioId, 
+        nombre, 
+        telefono || null, 
+        fecha_nacimiento || null, 
+        sexo || 'Otro', 
+        alergias || null, 
+        antecedentes || null,
+        contacto_emergencia || null,
+        telefono_emergencia || null,
+        foto_url || null,
+        responsable_nombre || null, 
+        responsable_parentesco || null,
+        responsable_telefono || null
+      ]
+    );
+    res.json({ ok: true, id: result.insertId, mensaje: 'Paciente registrado exitosamente' });
+  } catch (err) {
+    console.error('Error al registrar paciente:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -509,23 +559,6 @@ app.put('/api/pacientes/:id', async (req, res) => {
   }
 });
 
-app.post('/api/pacientes', async (req, res) => {
-  const usuarioId = req.headers['x-usuario-id'] || 1;
-  // Añadimos responsable_nombre y responsable_parentesco a la desestructuración
-  const { nombre, telefono, fecha_nacimiento, sexo, alergias, antecedentes, responsable_nombre, responsable_parentesco } = req.body;
-  
-  try {
-    const [result] = await pool.query(
-      `INSERT INTO pacientes (usuario_id, nombre, telefono, fecha_nacimiento, sexo, alergias, antecedentes, responsable_nombre, responsable_parentesco)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [usuarioId, nombre, telefono, fecha_nacimiento || null, sexo || 'Otro', alergias || null, antecedentes || null, responsable_nombre || null, responsable_parentesco || null]
-    );
-    res.json({ ok: true, id: result.insertId });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 app.delete('/api/pacientes/:id', async (req, res) => {
   const { id } = req.params;
   try {
@@ -555,13 +588,20 @@ app.get('/api/pacientes/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
-    const [pacienteRows] = await pool.query('SELECT * FROM pacientes WHERE id = ?', [id]);
+    const [pacienteRows] = await pool.query(
+      `SELECT *, DATE_FORMAT(fecha_nacimiento, '%Y-%m-%d') AS fecha_nacimiento_formateada 
+       FROM pacientes WHERE id = ?`, 
+      [id]
+    );
+
     if (pacienteRows.length === 0) {
       return res.status(404).json({ error: 'Paciente no encontrado' });
     }
     const paciente = pacienteRows[0];
+    if (paciente.fecha_nacimiento_formateada) {
+      paciente.fecha_nacimiento = paciente.fecha_nacimiento_formateada;
+    }
 
-    // Añadida la frecuencia_cardiaca a la extracción de datos
     const [consultas] = await pool.query(
       `SELECT id, DATE_FORMAT(fecha, '%Y-%m-%d %H:%i') as fecha_formateada, 
               doctor_nombre, motivo_consulta, enfermedad_actual, 
