@@ -1002,6 +1002,20 @@ app.put('/api/estudios-clinicos/:id/resultado', async (req, res) => {
   }
 });
 
+// Middleware global de errores en rutas Express
+app.use((err, req, res, next) => {
+  console.error('⚠️ Error capturado en ruta:', err.stack);
+  res.status(500).json({ error: 'Inconveniente interno temporal. Intenta de nuevo.' });
+});
+
+// Evitar que el proceso Node muera por excepciones no capturadas
+process.on('uncaughtException', (err) => {
+  console.error('🔥 Excepción no capturada atrapada:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('⚠️ Promesa no manejada:', reason);
+});
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor backend escuchando en http://localhost:${PORT}`);
