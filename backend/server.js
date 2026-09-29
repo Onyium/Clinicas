@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import cron from 'node-cron';
+import bcrypt from 'bcrypt';
 import { pool } from './db.js';
 import { 
   connectToWhatsApp, 
@@ -78,24 +79,64 @@ function calcularHoraFin(horaInicio, duracionMinutos) {
 // ==========================================
 // AUTENTICACIÓN
 // ==========================================
+// Asegúrate de importar bcrypt arriba en server.js:
+// import bcrypt from 'bcrypt';  (o const bcrypt = require('bcrypt'); si usas CommonJS)
+
 app.post('/api/login', async (req, res) => {
   const { usuario, password } = req.body;
+
+  if (!usuario || !password) {
+    return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
+  }
+
   try {
+    // 1. Buscamos el usuario por su nombre de usuario (sin filtrar por password todavía)
     const [rows] = await pool.query(
-      'SELECT id, usuario, nombre FROM usuarios WHERE usuario = ? AND password = ?',
-      [usuario, password]
+      'SELECT id, usuario, password, nombre FROM usuario WHERE usuario = ?',
+      [usuario]
     );
 
-    if (rows.length > 0) {
-      res.json({ ok: true, usuario: rows[0] });
-    } else {
-      res.status(401).json({ error: 'Credenciales inválidas' });
+    if (rows.length === 0) {
+      return res.status(401).json({ error: 'Credenciales inválidas' });
     }
+
+    const user = rows[0];
+    let passwordValido = false;
+
+    // 2. ¿La contraseña ya está encriptada con bcrypt?
+    if (user.password && (user.password.startsWith('$2b$') || user.password.startsWith('$2a$'))) {
+      passwordValido = await bcrypt.compare(password, user.password);
+    } else {
+      // 3. Si aún está en texto plano (como ahorita)
+      passwordValido = (password === user.password);
+
+      // Si coincidió, la encriptamos de una vez en segundo plano para que quede segura
+      if (passwordValido) {
+        const nuevoHash = await bcrypt.hash(password, 10);
+        await pool.query('UPDATE usuario SET password = ? WHERE id = ?', [nuevoHash, user.id]);
+        console.log(`🔐 Contraseña de ${user.usuario} migrada y encriptada exitosamente.`);
+      }
+    }
+
+    if (!passwordValido) {
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
+
+    // 4. Devolvemos los datos del usuario (sin exponer la contraseña)
+    res.json({
+      ok: true,
+      usuario: {
+        id: user.id,
+        usuario: user.usuario,
+        nombre: user.nombre
+      }
+    });
+
   } catch (err) {
+    console.error('Error en /api/login:', err);
     res.status(500).json({ error: err.message });
   }
 });
-
 // ==========================================
 // CONFIGURACIÓN DE LA CLÍNICA (ÚNICA Y BLINDADA)
 // ==========================================
