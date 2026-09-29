@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import cron from 'node-cron';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { pool } from './db.js';
 import { 
   connectToWhatsApp, 
@@ -92,7 +92,7 @@ app.post('/api/login', async (req, res) => {
   try {
     // 1. Buscamos el usuario por su nombre de usuario (sin filtrar por password todavía)
     const [rows] = await pool.query(
-      'SELECT id, usuario, password, nombre FROM usuario WHERE usuario = ?',
+      'SELECT id, usuario, password, nombre FROM usuarios WHERE usuario = ?',
       [usuario]
     );
 
@@ -113,7 +113,7 @@ app.post('/api/login', async (req, res) => {
       // Si coincidió, la encriptamos de una vez en segundo plano para que quede segura
       if (passwordValido) {
         const nuevoHash = await bcrypt.hash(password, 10);
-        await pool.query('UPDATE usuario SET password = ? WHERE id = ?', [nuevoHash, user.id]);
+        await pool.query('UPDATE usuarios SET password = ? WHERE id = ?', [nuevoHash, user.id]);
         console.log(`🔐 Contraseña de ${user.usuario} migrada y encriptada exitosamente.`);
       }
     }

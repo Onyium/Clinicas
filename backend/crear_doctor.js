@@ -7,8 +7,8 @@ dotenv.config();
 // ============================================================
 // CONFIGURA AQUÍ EL USUARIO QUE QUIERES CREAR O ACTUALIZAR
 // ============================================================
-const USUARIO = 'dra.liseyda';
-const NOMBRE = 'Dra. Liseyda Maye';
+const USUARIO = 'dra.liseyda2';
+const NOMBRE = 'Dra. Liseyda Maye2';
 const PASSWORD_PLANO = 'medica2026'; // La contraseña en texto que usará para loguearse
 
 async function procesarUsuario() {
@@ -17,7 +17,11 @@ async function procesarUsuario() {
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'clinica365',
-    port: process.env.DB_PORT || 3306
+    port: process.env.DB_PORT || 3306,
+    ssl: {
+    rejectUnauthorized: false // 👈 Permite la conexión segura sin líos de certificados locales
+    },
+    connectTimeout: 20000 // Da 20 segundos de margen
   });
 
   try {
