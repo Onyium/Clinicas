@@ -446,17 +446,15 @@ export default function App() {
         cita={citaParaReceta}
       />
 
-      <>
-      {/* Tu enrutador o componentes habituales */}
-      <TuRouterOMain />
+      
 
-      {/* Notificaciones flotantes animadas */}
+      
       <Toaster 
         position="top-right" 
         richColors 
         closeButton 
       />
-    </>
+    
 
     </div>
   );
