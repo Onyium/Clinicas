@@ -157,7 +157,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
             await api.post('/api/estudios-clinicos', { consulta_id: consultaSeleccionada.id, paciente_id: pacienteId, ...est });
           }
         }
-        alert('✅ Consulta, signos vitales, receta y nuevos estudios guardados con éxito.');
+        toast.success('✅ Consulta, signos vitales, receta y nuevos estudios guardados con éxito.');
       } else {
         const res = await api.post('/api/consultas-independientes', { paciente_id: pacienteId, ...formConsulta, medicamentos: listaMedicamentosValidos });
         const nuevaConsultaId = res.data.id;

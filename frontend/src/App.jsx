@@ -19,6 +19,7 @@ import CatalogoPacientesView from './components/CatalogoPacientesView';
 import ConsultaMedicaView from './components/ConsultaMedicaView';
 
 import api from './api';
+import { Toaster } from 'sonner';
 
 const STATUS_COLORS = {
   RESERVADA: { bg: '#F59E0B', border: '#D97706' },
@@ -444,6 +445,18 @@ export default function App() {
         onClose={() => setIsRecetaOpen(false)}
         cita={citaParaReceta}
       />
+
+      <>
+      {/* Tu enrutador o componentes habituales */}
+      <TuRouterOMain />
+
+      {/* Notificaciones flotantes animadas */}
+      <Toaster 
+        position="top-right" 
+        richColors 
+        closeButton 
+      />
+    </>
 
     </div>
   );
