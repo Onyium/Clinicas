@@ -212,10 +212,28 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
     } catch (err) { toast.error('Error al eliminar la consulta'); }
   };
 
-  const handleEliminarExpediente = async () => {
-    if (!window.confirm('⚠️ ¿Estás COMPLETAMENTE SEGURO de eliminar este expediente?')) return;
-    try { await api.delete(`/api/pacientes/${pacienteId}`); toast.success('🗑️ Expediente eliminado.'); onVolver(); } catch (err) { toast.error('Error al eliminar el expediente.'); }
-  };
+  const handleEliminarExpediente = () => {
+  toast('⚠️ ¿Estás COMPLETAMENTE SEGURO de eliminar este expediente?', {
+    description: 'Esta acción borrará todo el historial del paciente de forma irreversible.',
+    duration: 10000, // Da 10 segundos antes de desaparecer solo
+    action: {
+      label: 'Sí, eliminar',
+      onClick: async () => {
+        try {
+          await api.delete(`/api/pacientes/${pacienteId}`);
+          toast.success('🗑️ Expediente eliminado.');
+          onVolver();
+        } catch (err) {
+          toast.error('Error al eliminar el expediente.');
+        }
+      },
+    },
+    cancel: {
+      label: 'Cancelar',
+      onClick: () => {},
+    },
+  });
+};
 
   const activarModoEdicion = () => {
     if (!consultaSeleccionada) return;
