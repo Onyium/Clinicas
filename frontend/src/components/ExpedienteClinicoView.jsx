@@ -603,15 +603,15 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                           <div className="space-y-3">
                             <div>
                               <span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Motivo de consulta</span>
-                              <p className="text-xs text-slate-800 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.motivo_consulta || 'N/D'}</p>
+                              <p className="text-xs text-slate-800 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.motivo_consulta || '-'}</p>
                             </div>
                             <div>
                               <span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Presente enfermedad</span>
-                              <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.enfermedad_actual || 'N/D'}</p>
+                              <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.enfermedad_actual || '-'}</p>
                             </div>
                             <div>
                               <span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Otros antecedentes</span>
-                              <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.antecedentes_patologicos || 'N/D'}</p>
+                              <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.antecedentes_patologicos || '-'}</p>
                             </div>
                           </div>
                         </div>
@@ -622,19 +622,19 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                           <div className="space-y-3">
                             <div>
                               <span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Examen físico</span>
-                              <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.examen_fisico || 'N/D'}</p>
+                              <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.examen_fisico || '-'}</p>
                             </div>
                             <div>
                               <span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Reporte de exámenes</span>
-                              <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.reporte_examenes || 'N/D'}</p>
+                              <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.reporte_examenes || '-'}</p>
                             </div>
                             <div>
                               <span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Impresión diagnóstica</span>
-                              <p className="text-xs font-bold text-blue-900 bg-blue-50/70 p-2.5 rounded-xl border border-blue-100">{consultaSeleccionada.diagnostico || 'N/D'}</p>
+                              <p className="text-xs font-bold text-blue-900 bg-blue-50/70 p-2.5 rounded-xl border border-blue-100">{consultaSeleccionada.diagnostico || '-'}</p>
                             </div>
                             <div>
                               <span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">Plan de manejo</span>
-                              <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.plan_tratamiento || 'N/D'}</p>
+                              <p className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">{consultaSeleccionada.plan_tratamiento || '-'}</p>
                             </div>
                           </div>
                         </div>
@@ -694,7 +694,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
                 ) : (
                   <div className="space-y-2.5">
                     {citas.map((c) => {
-                      const fechaCitaStr = c.fecha_cita ? String(c.fecha_cita).slice(0, 10) : 'Fecha N/D';
+                      const fechaCitaStr = c.fecha_cita ? String(c.fecha_cita).slice(0, 10) : 'Fecha -';
                       const horaCitaStr = c.hora_cita ? String(c.hora_cita).slice(0, 5) : '';
                       const horaFinStr = c.hora_fin ? ` - ${String(c.hora_fin).slice(0, 5)}` : '';
                       const estado = c.estado || 'CONFIRMADA';
