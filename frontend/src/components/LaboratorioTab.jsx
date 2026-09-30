@@ -288,6 +288,9 @@ export default function LaboratorioTab({
             <h4 className="text-xs font-bold text-blue-900 uppercase">🧪 Solicitud de Exámenes Clínicos</h4>
             <p className="text-[11px] text-slate-500">Agregue los análisis o estudios requeridos para el paciente</p>
           </div>
+          <button onClick={imprimirLaboratorio} className="bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg transition shadow-2xs flex items-center gap-1 cursor-pointer" > 
+            🖨️ Imprimir Orden 
+            </button>
           <button 
             type="button" 
             onClick={agregarEstudioNuevo} 
@@ -295,7 +298,7 @@ export default function LaboratorioTab({
           >
             + Agregar Examen
           </button>
-          <button onClick={imprimirLaboratorio} className="bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg transition shadow-2xs flex items-center gap-1 cursor-pointer" > 🖨️ Imprimir Orden </button>
+          
         </div>
         <div className="space-y-2">
           {estudiosNuevos.map((est, idx) => (
