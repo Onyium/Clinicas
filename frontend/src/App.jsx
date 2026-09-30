@@ -19,7 +19,7 @@ import CatalogoPacientesView from './components/CatalogoPacientesView';
 import ConsultaMedicaView from './components/ConsultaMedicaView';
 
 import api from './api';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 
 const STATUS_COLORS = {
   RESERVADA: { bg: '#F59E0B', border: '#D97706' },
