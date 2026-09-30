@@ -101,13 +101,24 @@ export default function App() {
   }, [isAuthenticated]);
 
   const handleLogout = () => {
-    if (window.confirm('¿Deseas cerrar la sesión actual?')) {
-      localStorage.removeItem('clinic_auth');
-      localStorage.removeItem('clinic_usuario');
-      localStorage.removeItem('clinic_user_nombre');
-      setIsAuthenticated(false);
-    }
-  };
+  toast('¿Deseas cerrar la sesión actual?', {
+    description: 'Tendrás que iniciar sesión nuevamente para acceder.',
+    duration: 6000,
+    action: {
+      label: 'Cerrar sesión',
+      onClick: () => {
+        localStorage.removeItem('clinic_auth');
+        localStorage.removeItem('clinic_usuario');
+        localStorage.removeItem('clinic_user_nombre');
+        setIsAuthenticated(false);
+      },
+    },
+    cancel: {
+      label: 'Cancelar',
+      onClick: () => {},
+    },
+  });
+};
 
   if (!isAuthenticated) {
     return (
@@ -231,31 +242,56 @@ export default function App() {
     }
   };
 
-  const handleCitaDelete = async () => {
-    if (!window.confirm('¿Seguro que deseas eliminar esta cita?')) return;
-    try {
-      await api.delete(`/api/citas/${selectedId}`);
-      setIsModalOpen(false);
-      fetchData();
-    } catch (err) {
-      toast.error('Error al eliminar la cita');
-    }
-  };
+  const handleCitaDelete = () => {
+  toast('¿Seguro que deseas eliminar esta cita?', {
+    description: 'La cita se removerá de la agenda del calendario.',
+    duration: 8000,
+    action: {
+      label: 'Sí, eliminar',
+      onClick: async () => {
+        try {
+          await api.delete(`/api/citas/${selectedId}`);
+          setIsModalOpen(false);
+          toast.success('Cita eliminada de la agenda');
+          fetchData();
+        } catch (err) {
+          toast.error('Error al eliminar la cita');
+        }
+      },
+    },
+    cancel: {
+      label: 'Cancelar',
+      onClick: () => {},
+    },
+  });
+};
 
-  const handleEmergenciaSubmit = async (e) => {
-    e.preventDefault();
-    const doc = doctores.find(d => String(d.id) === String(emergenciaForm.doctor_id));
-    if (!window.confirm(`¿Bloquear jornada del ${emergenciaForm.fecha} para ${doc?.nombre} y notificar a sus pacientes?`)) return;
+  const handleEmergenciaSubmit = (e) => {
+  e.preventDefault();
+  const doc = doctores.find(d => String(d.id) === String(emergenciaForm.doctor_id));
 
-    try {
-      await api.post(`/api/doctores/bloquear-fecha`, emergenciaForm);
-      toast.success('Jornada bloqueada y pacientes notificados.');
-      setIsEmergenciaOpen(false);
-      fetchData();
-    } catch (err) {
-      toast.error('Error al bloquear jornada');
-    }
-  };
+  toast(`¿Bloquear jornada del ${emergenciaForm.fecha}?`, {
+    description: `Se cancelarán las citas de ${doc?.nombre || 'el doctor seleccionado'} y se notificará a sus pacientes.`,
+    duration: 9000,
+    action: {
+      label: 'Sí, bloquear',
+      onClick: async () => {
+        try {
+          await api.post(`/api/doctores/bloquear-fecha`, emergenciaForm);
+          toast.success('Jornada bloqueada y pacientes notificados.');
+          setIsEmergenciaOpen(false);
+          fetchData();
+        } catch (err) {
+          toast.error('Error al bloquear jornada');
+        }
+      },
+    },
+    cancel: {
+      label: 'Cancelar',
+      onClick: () => {},
+    },
+  });
+};
 
   return (
     <div className="min-h-screen bg-slate-100 font-sans">

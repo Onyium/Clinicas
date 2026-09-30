@@ -196,22 +196,54 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
     } catch (err) { toast.error('Error al agregar estudio clínico'); }
   };
 
-  const handleEliminarEstudio = async (estudioId) => {
-    if (!window.confirm('¿Desea eliminar este estudio clínico?')) return;
-    try { await api.delete(`/api/estudios-clinicos/${estudioId}`); await cargarExpediente(); } catch (err) { toast.error('Error al eliminar estudio'); }
-  };
+  const handleEliminarEstudio = (estudioId) => {
+  toast('¿Desea eliminar este estudio clínico?', {
+    description: 'El archivo y su registro se eliminarán del expediente.',
+    duration: 8000,
+    action: {
+      label: 'Eliminar',
+      onClick: async () => {
+        try {
+          await api.delete(`/api/estudios-clinicos/${estudioId}`);
+          toast.success('Estudio clínico eliminado');
+          await cargarExpediente();
+        } catch (err) {
+          toast.error('Error al eliminar estudio');
+        }
+      },
+    },
+    cancel: {
+      label: 'Cancelar',
+      onClick: () => {},
+    },
+  });
+};
 
-  const handleEliminarConsulta = async () => {
-    if (!consultaSeleccionada) return;
-    if (!window.confirm('¿Estás seguro de eliminar esta consulta? Esta acción no se puede deshacer.')) return;
-    try {
-      await api.delete(`/api/consultas-independientes/${consultaSeleccionada.id}`);
-      toast.success('🗑️ Consulta eliminada con éxito.');
-      setConsultaSeleccionada(null);
-      await cargarExpediente();
-    } catch (err) { toast.error('Error al eliminar la consulta'); }
-  };
+  const handleEliminarConsulta = () => {
+  if (!consultaSeleccionada) return;
 
+  toast('¿Estás seguro de eliminar esta consulta?', {
+    description: 'Esta acción no se puede deshacer y borrará el registro clínico.',
+    duration: 8000,
+    action: {
+      label: 'Sí, eliminar',
+      onClick: async () => {
+        try {
+          await api.delete(`/api/consultas-independientes/${consultaSeleccionada.id}`);
+          toast.success('🗑️ Consulta eliminada con éxito.');
+          setConsultaSeleccionada(null);
+          await cargarExpediente();
+        } catch (err) {
+          toast.error('Error al eliminar la consulta');
+        }
+      },
+    },
+    cancel: {
+      label: 'Cancelar',
+      onClick: () => {},
+    },
+  });
+};
   const handleEliminarExpediente = () => {
   toast('⚠️ ¿Estás COMPLETAMENTE SEGURO de eliminar este expediente?', {
     description: 'Esta acción borrará todo el historial del paciente de forma irreversible.',
