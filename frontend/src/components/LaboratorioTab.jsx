@@ -21,6 +21,7 @@ export default function LaboratorioTab({
   const [formResultado, setFormResultado] = useState({ resultados_texto: '', documento_url: '' });
   const [guardandoResultado, setGuardandoResultado] = useState(false);
   const [cargandoRefresco, setCargandoRefresco] = useState(false);
+  const [subiendoResultado, setSubiendoResultado] = useState(false);
 
   const funcionRecarga = onActualizarExpediente || onRecargar;
 
@@ -96,6 +97,47 @@ export default function LaboratorioTab({
       setGuardandoResultado(false);
     }
   };
+
+  const handleSubirResultado = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  if (file.size > 10 * 1024 * 1024) {
+    toast.error('El archivo supera el límite de 10MB');
+    return;
+  }
+
+  setSubiendoResultado(true);
+  const toastId = toast.loading('Subiendo documento a la nube...');
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    // Usa exactamente las mismas credenciales que usaste en handleSubirLogo
+    formData.append('upload_preset', 'TU_UPLOAD_PRESET');
+    const CLOUD_NAME = 'TU_CLOUD_NAME';
+
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    const data = await res.json();
+
+    if (data.secure_url) {
+      setFormResultado(prev => ({ ...prev, documento_url: data.secure_url }));
+      toast.success('Documento subido correctamente', { id: toastId });
+    } else {
+      throw new Error('Error al obtener URL');
+    }
+  } catch (err) {
+    console.error(err);
+    toast.error('Error al subir el archivo', { id: toastId });
+  } finally {
+    setSubiendoResultado(false);
+    e.target.value = '';
+  }
+};
 
   const imprimirLaboratorio = () => {
     if (!consultaSeleccionada || estudiosDeConsulta.length === 0) {
@@ -434,18 +476,53 @@ export default function LaboratorioTab({
                   className="w-full border border-slate-300 rounded-xl p-2 outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
+              
+              <div className="bg-white p-3 border border-slate-200 rounded-xl">
+                <label className="text-[11px] font-bold text-slate-600 uppercase block mb-2">
+                  Archivo o Estudio Clínico
+                </label>
+                
+                <div className="flex items-center gap-4">
+                  {/* Icono de vista previa según el estado */}
+                  <div className="w-16 h-16 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-2xl shrink-0">
+                    {formResultado.documento_url ? (
+                      formResultado.documento_url.endsWith('.pdf') ? '📄' : '🖼️'
+                    ) : (
+                      '🧪'
+                    )}
+                  </div>
 
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Enlace del Resultado (PDF o Foto en Drive/Imgur)</label>
-                <input
-                  type="url"
-                  placeholder="https://drive.google.com/file/d/..."
-                  value={formResultado.documento_url}
-                  onChange={(e) => setFormResultado({ ...formResultado, documento_url: e.target.value })}
-                  className="w-full border border-slate-300 rounded-xl p-2 outline-none focus:ring-1 focus:ring-blue-500 font-mono"
-                />
-                <span className="text-[10px] text-slate-400 mt-0.5 block">Pegue un enlace público al archivo del examen.</span>
+                  <div className="flex-1">
+                    <input 
+                      type="file" 
+                      accept="image/*,application/pdf"
+                      onChange={handleSubirResultado} 
+                      disabled={subiendoResultado}
+                      className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 outline-none cursor-pointer disabled:opacity-50" 
+                    />
+                    
+                    {subiendoResultado ? (
+                      <span className="text-xs text-blue-600 font-bold block mt-1.5 animate-pulse">
+                        ⏳ Subiendo documento...
+                      </span>
+                    ) : formResultado.documento_url ? (
+                      <a 
+                        href={formResultado.documento_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-xs text-blue-600 hover:underline font-semibold block mt-1.5"
+                      >
+                        ✅ Archivo cargado — Ver documento
+                      </a>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 block mt-1.5">
+                        Formatos permitidos: PDF, JPG, PNG, WEBP (hasta 10MB).
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
+              
 
               <div className="flex justify-end gap-2 pt-2 border-t">
                 <button
