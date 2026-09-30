@@ -1,6 +1,6 @@
 // src/components/expediente/SidebarPaciente.jsx
 import React from 'react';
-
+import { toast } from 'sonner';
 export default function SidebarPaciente({ 
   paciente, 
   edadActual, 

@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import api from '../api';
 import RecetaTab from './RecetaTab';
 import LaboratorioTab from './LaboratorioTab';
+import { toast } from 'sonner';
 
 // Importación de submódulos
 import SidebarPaciente from './expediente/SidebarPaciente';
 import FormularioGeneral from './expediente/FormularioGeneral';
 import HistorialConsultas from './expediente/HistorialConsultas';
 import DocumentosTab from './expediente/DocumentosTab';
-import { toast } from 'sonner';
+
 
 function calcularEdadDesdeFecha(fechaNacimiento) {
   if (!fechaNacimiento) return '';

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
+import { toast } from 'sonner';
 
 export default function ExpedienteModal({ isOpen, onClose, pacienteId }) {
   const [data, setData] = useState(null);
@@ -52,9 +53,9 @@ export default function ExpedienteModal({ isOpen, onClose, pacienteId }) {
       });
       setEditando(false);
       cargarExpediente();
-      alert('Datos clínicos actualizados con éxito');
+      toast.success('Datos clínicos actualizados con éxito');
     } catch (err) {
-      alert('Error al guardar datos clínicos');
+      toast.error('Error al guardar datos clínicos');
     }
   };
 

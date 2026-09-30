@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import api from '../api';
-
+import { toast } from 'sonner';
 export default function NuevoPacienteModal({ isOpen, onClose, onPacienteCreado }) {
   const [form, setForm] = useState({
     nombre: '',

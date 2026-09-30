@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
+import { toast } from 'sonner';
 
 export default function ConfigModal({ isOpen, onClose, onSaved }) {
   const [form, setForm] = useState({

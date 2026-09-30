@@ -1,6 +1,6 @@
 // src/components/expediente/FormularioGeneral.jsx
 import React from 'react';
-
+import { toast } from 'sonner';
 export default function FormularioGeneral({
   formGeneral,
   setFormGeneral,
