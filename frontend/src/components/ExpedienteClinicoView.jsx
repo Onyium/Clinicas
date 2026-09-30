@@ -344,7 +344,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
       {/* HEADER */}
       <header className="bg-[#1b4e7b] text-white px-6 py-2.5 flex justify-between items-center shrink-0 shadow-sm">
         <div className="flex items-center gap-4">
-          <span className="font-black tracking-wider text-base">CLINIC 365</span>
+          <span className="font-black tracking-wider text-base">CLINIC PRO</span>
           <span className="text-[10px] bg-blue-500/30 text-blue-200 px-2 py-0.5 rounded font-mono">EXPEDIENTE CLÍNICO</span>
         </div>
         <button onClick={onVolver} className="bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 cursor-pointer">

@@ -35,7 +35,7 @@ export default function Login({ onLogin }) {
           <div className="w-16 h-16 bg-white rounded-2xl mx-auto flex items-center justify-center shadow-inner mb-4">
             <span className="text-3xl">🩺</span>
           </div>
-          <h1 className="text-2xl font-black text-white tracking-wider">CLINIC 365</h1>
+          <h1 className="text-2xl font-black text-white tracking-wider">CLINIC PRO</h1>
           <p className="text-blue-200 text-sm mt-1">Acceso seguro al sistema xd</p>
         </div>
 
