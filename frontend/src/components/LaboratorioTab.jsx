@@ -102,37 +102,24 @@ export default function LaboratorioTab({
   const file = e.target.files[0];
   if (!file) return;
 
-  if (file.size > 10 * 1024 * 1024) {
-    toast.error('El archivo supera el límite de 10MB');
-    return;
-  }
+  const formData = new FormData();
+  // Ojo: revisa si tu backend espera el campo 'logo' o 'file' en multer
+  formData.append('logo', file); 
 
   setSubiendoResultado(true);
-  const toastId = toast.loading('Subiendo documento a la nube...');
+  const toastId = toast.loading('Subiendo documento...');
 
   try {
-    const formData = new FormData();
-    formData.append('file', file);
-    // Usa exactamente las mismas credenciales que usaste en handleSubirLogo
-    formData.append('upload_preset', 'TU_UPLOAD_PRESET');
-    const CLOUD_NAME = 'TU_CLOUD_NAME';
-
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`, {
-      method: 'POST',
-      body: formData,
+    const res = await api.post('/api/upload-logo', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
     });
 
-    const data = await res.json();
-
-    if (data.secure_url) {
-      setFormResultado(prev => ({ ...prev, documento_url: data.secure_url }));
-      toast.success('Documento subido correctamente', { id: toastId });
-    } else {
-      throw new Error('Error al obtener URL');
-    }
+    // Guardamos la URL de Cloudinary en el formulario del resultado
+    setFormResultado(prev => ({ ...prev, documento_url: res.data.url }));
+    toast.success('Documento subido correctamente', { id: toastId });
   } catch (err) {
     console.error(err);
-    toast.error('Error al subir el archivo', { id: toastId });
+    toast.error('Error al subir el archivo al servidor.', { id: toastId });
   } finally {
     setSubiendoResultado(false);
     e.target.value = '';
