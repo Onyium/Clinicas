@@ -6,7 +6,8 @@ export default function CatalogoPacientesView({
   onVerExpediente, 
   onNuevaNota, 
   onNuevoPaciente,
-  onIrAgenda 
+  onIrAgenda,
+  onAbrirConfig 
 }) {
   const [pacientes, setPacientes] = useState([]);
   const [busqueda, setBusqueda] = useState('');
@@ -49,6 +50,14 @@ export default function CatalogoPacientesView({
         </div>
 
         <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={onAbrirConfig}
+            className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition cursor-pointer flex items-center justify-center border border-slate-200 hover:shadow-xs"
+            title="Configuración clínica"
+          >
+            ⚙️
+          </button>
           <button
             onClick={onNuevoPaciente}
             className="bg-[#10a37f] hover:bg-[#0e8a6c] text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs flex items-center gap-1.5 transition cursor-pointer"

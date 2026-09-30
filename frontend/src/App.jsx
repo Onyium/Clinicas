@@ -324,6 +324,7 @@ export default function App() {
               }}
               onIrAgenda={() => setVistaActual('agenda')}
               onNuevoPaciente={() => setIsNuevoPacienteModalOpen(true)}
+              onAbrirConfig={() => setIsConfigOpen(true)}
             />
           ) : (
             /* VISTA DE AGENDA / CALENDARIO */
