@@ -36,7 +36,7 @@ export default function Login({ onLogin }) {
             <span className="text-3xl">🩺</span>
           </div>
           <h1 className="text-2xl font-black text-white tracking-wider">CLINIC PRO</h1>
-          <p className="text-blue-200 text-sm mt-1">Acceso seguro al sistema xd</p>
+          <p className="text-blue-200 text-sm mt-1">Acceso seguro al sistema</p>
         </div>
 
         <div className="p-8">
