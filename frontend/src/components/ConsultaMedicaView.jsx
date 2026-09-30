@@ -70,9 +70,9 @@ export default function ConsultaMedicaView({ cita, onVolver }) {
         ...form,
         medicamentos: medicamentos.filter(m => m.medicamento.trim() !== '')
       });
-      alert('✅ Consulta clínica y receta guardadas correctamente.');
+      toast.success('✅ Consulta clínica y receta guardadas correctamente.');
     } catch (err) {
-      alert('Error al guardar la consulta');
+      toast.error('Error al guardar la consulta');
     } finally {
       setGuardando(false);
     }

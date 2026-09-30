@@ -168,7 +168,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
             await api.post('/api/estudios-clinicos', { consulta_id: nuevaConsultaId, paciente_id: pacienteId, ...est });
           }
         }
-        alert('✅ Consulta guardada con éxito.');
+        toast.success('✅ Consulta guardada con éxito.');
       }
 
       setModoCrear(false);
@@ -178,7 +178,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
       await cargarExpediente();
     } catch (err) {
       console.error(err);
-      alert('Error al guardar la consulta');
+      toast.error('Error al guardar la consulta');
     } finally {
       setGuardando(false);
     }
@@ -189,16 +189,16 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
     if (!consultaSeleccionada) return;
     try {
       await api.post(`/api/estudios-clinicos`, { consulta_id: consultaSeleccionada.id, paciente_id: pacienteId, ...formEstudioRapido });
-      alert('✅ Estudio clínico agregado con éxito.');
+      toast.success('✅ Estudio clínico agregado con éxito.');
       setFormEstudioRapido({ tipo_estudio: '', laboratorio: '', observaciones: '' });
       setMostrarModalEstudio(false);
       await cargarExpediente();
-    } catch (err) { alert('Error al agregar estudio clínico'); }
+    } catch (err) { toast.error('Error al agregar estudio clínico'); }
   };
 
   const handleEliminarEstudio = async (estudioId) => {
     if (!window.confirm('¿Desea eliminar este estudio clínico?')) return;
-    try { await api.delete(`/api/estudios-clinicos/${estudioId}`); await cargarExpediente(); } catch (err) { alert('Error al eliminar estudio'); }
+    try { await api.delete(`/api/estudios-clinicos/${estudioId}`); await cargarExpediente(); } catch (err) { toast.error('Error al eliminar estudio'); }
   };
 
   const handleEliminarConsulta = async () => {
@@ -206,15 +206,15 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
     if (!window.confirm('¿Estás seguro de eliminar esta consulta? Esta acción no se puede deshacer.')) return;
     try {
       await api.delete(`/api/consultas-independientes/${consultaSeleccionada.id}`);
-      alert('🗑️ Consulta eliminada con éxito.');
+      toast.success('🗑️ Consulta eliminada con éxito.');
       setConsultaSeleccionada(null);
       await cargarExpediente();
-    } catch (err) { alert('Error al eliminar la consulta'); }
+    } catch (err) { toast.error('Error al eliminar la consulta'); }
   };
 
   const handleEliminarExpediente = async () => {
     if (!window.confirm('⚠️ ¿Estás COMPLETAMENTE SEGURO de eliminar este expediente?')) return;
-    try { await api.delete(`/api/pacientes/${pacienteId}`); alert('🗑️ Expediente eliminado.'); onVolver(); } catch (err) { alert('Error al eliminar el expediente.'); }
+    try { await api.delete(`/api/pacientes/${pacienteId}`); toast.success('🗑️ Expediente eliminado.'); onVolver(); } catch (err) { toast.error('Error al eliminar el expediente.'); }
   };
 
   const activarModoEdicion = () => {
@@ -264,11 +264,11 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
     try { 
       // 👇 Cambiamos api.post por api.put apuntando a /api/pacientes/:id
       await api.put(`/api/pacientes/${pacienteId}`, formGeneral); 
-      alert('✅ Ficha médica actualizada con éxito.'); 
+      toast.success('✅ Ficha médica actualizada con éxito.'); 
       await cargarExpediente(); 
     } catch (err) { 
       console.error(err);
-      alert('Error al guardar datos generales'); 
+      toast.error('Error al guardar datos generales'); 
     } finally { 
       setGuardandoGeneral(false); 
     }

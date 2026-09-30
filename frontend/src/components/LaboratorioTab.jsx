@@ -86,12 +86,12 @@ export default function LaboratorioTab({
         documento_url: formResultado.documento_url,
         estado: 'Completado'
       });
-      alert('✅ Resultados guardados con éxito.');
+      toast.success('✅ Resultados guardados con éxito.');
       setEstudioParaResultado(null);
       if (funcionRecarga) await funcionRecarga();
     } catch (err) {
       console.error(err);
-      alert('Error guardando los resultados del estudio.');
+      toast.error('Error guardando los resultados del estudio.');
     } finally {
       setGuardandoResultado(false);
     }
@@ -99,7 +99,7 @@ export default function LaboratorioTab({
 
   const imprimirLaboratorio = () => {
     if (!consultaSeleccionada || estudiosDeConsulta.length === 0) {
-      alert('No hay estudios clínicos registrados para imprimir.');
+      toast.error('No hay estudios clínicos registrados para imprimir.');
       return;
     }
 

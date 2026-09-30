@@ -40,7 +40,7 @@ export default function RecetaTab({
 
   const imprimirReceta = () => {
     if (lista.length === 0) {
-      alert('No hay medicamentos registrados para imprimir.');
+      toast.error('No hay medicamentos registrados para imprimir.');
       return;
     }
 

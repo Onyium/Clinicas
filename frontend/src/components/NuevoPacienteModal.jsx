@@ -24,7 +24,7 @@ export default function NuevoPacienteModal({ isOpen, onClose, onPacienteCreado }
       setForm({ nombre: '', telefono: '', sexo: 'M', fecha_nacimiento: '' });
     } catch (err) {
       console.error(err);
-      alert('Error al registrar el paciente');
+      toast.error('Error al registrar el paciente');
     } finally {
       setGuardando(false);
     }

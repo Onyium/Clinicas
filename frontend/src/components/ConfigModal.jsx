@@ -60,7 +60,7 @@ export default function ConfigModal({ isOpen, onClose, onSaved }) {
       setForm({ ...form, logo_url: res.data.url });
     } catch (err) {
       console.error(err);
-      alert('Error al subir la imagen al servidor.');
+      toast.error('Error al subir la imagen al servidor.');
     } finally {
       setSubiendoLogo(false);
     }
@@ -71,11 +71,11 @@ export default function ConfigModal({ isOpen, onClose, onSaved }) {
     setCargando(true);
     try {
       await api.put('/api/configuracion', form);
-      alert('✅ Configuración actualizada con éxito.');
+      toast.success('✅ Configuración actualizada con éxito.');
       if (onSaved) onSaved(form);
       onClose();
     } catch (err) {
-      alert('Error al guardar configuración');
+      toast.error('Error al guardar configuración');
     } finally {
       setCargando(false);
     }

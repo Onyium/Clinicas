@@ -227,7 +227,7 @@ export default function App() {
       }
       fetchData();
     } catch (err) {
-      alert('Error al guardar la cita');
+      toast.error('Error al guardar la cita');
     }
   };
 
@@ -238,7 +238,7 @@ export default function App() {
       setIsModalOpen(false);
       fetchData();
     } catch (err) {
-      alert('Error al eliminar la cita');
+      toast.error('Error al eliminar la cita');
     }
   };
 
@@ -249,11 +249,11 @@ export default function App() {
 
     try {
       await api.post(`/api/doctores/bloquear-fecha`, emergenciaForm);
-      alert('Jornada bloqueada y pacientes notificados.');
+      toast.success('Jornada bloqueada y pacientes notificados.');
       setIsEmergenciaOpen(false);
       fetchData();
     } catch (err) {
-      alert('Error al bloquear jornada');
+      toast.error('Error al bloquear jornada');
     }
   };
 

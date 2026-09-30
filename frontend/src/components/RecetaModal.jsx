@@ -73,11 +73,11 @@ export default function RecetaModal({ isOpen, onClose, cita }) {
         medicamentos
       });
 
-      alert('¡Receta guardada y enviada al WhatsApp del paciente!');
+      toast.success('¡Receta guardada y enviada al WhatsApp del paciente!');
       onClose();
     } catch (err) {
       console.error(err);
-      alert('Error guardando la receta');
+      toast.error('Error guardando la receta');
     } finally {
       setEnviando(false);
     }
@@ -87,9 +87,9 @@ export default function RecetaModal({ isOpen, onClose, cita }) {
     if (!cita?.id) return;
     try {
       await api.post(`/api/test/enviar-recordatorio-cita/${cita.id}`);
-      alert(`🧪 Recordatorio de ${cita.paciente_nombre} enviado. Responde "1" en WhatsApp y dale a 🔄.`);
+      toast.success(`🧪 Recordatorio de ${cita.paciente_nombre} enviado. Responde "1" en WhatsApp y dale a 🔄.`);
     } catch (err) {
-      alert(err.response?.data?.error || 'Error al enviar recordatorio de esta cita');
+      toast.error(err.response?.data?.error || 'Error al enviar recordatorio de esta cita');
     }
   };
 
