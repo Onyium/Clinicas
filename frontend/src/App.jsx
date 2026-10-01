@@ -380,6 +380,18 @@ export default function App() {
                     >
                       🚨 Bloquear Día
                     </button>
+                    <button
+                    type="button"
+                    onClick={() => setAbrirModalWhatsApp(true)}
+                    className={`text-xs px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition ${
+                      whatsappConectado 
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100' 
+                        : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 animate-pulse'
+                    }`}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${whatsappConectado ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                    {whatsappConectado ? 'WhatsApp Activo' : 'Vincular WhatsApp de la Clínica'}
+                  </button>
 
                     <button
                       onClick={() => setIsConfigOpen(true)}
