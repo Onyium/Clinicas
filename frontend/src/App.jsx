@@ -5,6 +5,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 
 import CitaModal from './components/CitaModal';
+import WhatsAppConfigModal from './components/WhatsAppConfigModal';
 import EmergenciaModal from './components/EmergenciaModal';
 import ConfigModal from './components/ConfigModal';
 import RecetaModal from './components/RecetaModal';
@@ -43,6 +44,8 @@ export default function App() {
 
   const [filtroDoctor, setFiltroDoctor] = useState('TODOS');
   const [busqueda, setBusqueda] = useState('');
+  const [whatsappConectado, setWhatsappConectado] = useState(false);
+  const [abrirModalWhatsApp, setAbrirModalWhatsApp] = useState(false);
 
   // Estados de Modales
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -494,7 +497,11 @@ export default function App() {
         onClose={() => setIsRecetaOpen(false)}
         cita={citaParaReceta}
       />
-
+      <WhatsAppConfigModal
+        clinicaId="1"
+        isOpen={abrirModalWhatsApp}
+        onClose={() => setAbrirModalWhatsApp(false)}
+      />
       
 
       
