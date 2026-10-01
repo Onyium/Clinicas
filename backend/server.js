@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import cron from 'node-cron';
 import bcrypt from 'bcryptjs';
 import { pool } from './db.js';
-import whatsappRoutes from './routes/whatsappRoutes.js';
+import whatsappRoutes from './whatsappRoutes.js';
 import { 
   connectToWhatsApp, 
   enviarMensajeReserva, 

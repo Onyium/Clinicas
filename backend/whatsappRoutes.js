@@ -3,7 +3,7 @@ import {
   initWhatsAppSession, 
   getWhatsAppStatus, 
   enviarMensajeCita 
-} from '../services/whatsappService.js';
+} from './whatsappService.js';
 
 const router = express.Router();
 
