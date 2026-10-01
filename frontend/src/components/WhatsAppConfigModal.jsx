@@ -74,9 +74,8 @@ export default function WhatsAppConfigModal({ clinicaId = '1', isOpen, onClose }
         {/* Contenedor de Estado Dinámico */}
         <div className="text-center py-2 space-y-3 min-h-[220px] flex flex-col justify-center items-center">
           
-          {/* 1. ESTADO: CONECTADO */}
           {estado === 'conectado' && (
-            <div className="w-full bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl text-xs space-y-2">
+            <div className="w-full bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl text-xs space-y-3">
               <div className="w-10 h-10 mx-auto bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-lg font-bold">
                 ✓
               </div>
@@ -84,6 +83,37 @@ export default function WhatsAppConfigModal({ clinicaId = '1', isOpen, onClose }
               <p className="text-emerald-700 leading-relaxed">
                 El sistema está listo. Los recordatorios de citas se enviarán de forma automática desde el número de la clínica.
               </p>
+
+              {/* Botón para desconectar la sesión */}
+              <button
+                type="button"
+                disabled={cargandoAccion}
+                onClick={async () => {
+                  const confirmar = window.confirm('¿Seguro que deseas desvincular el WhatsApp de la clínica? Tendrás que volver a escanear el código QR para enviar mensajes.');
+                  if (!confirmar) return;
+
+                  setCargandoAccion(true);
+                  try {
+                    await api.post(`/api/whatsapp/desconectar/${clinicaId}`);
+                    setEstado('desconectado');
+                    setQrSrc(null);
+                  } catch (err) {
+                    console.error('Error al desconectar WhatsApp:', err);
+                  } finally {
+                    setCargandoAccion(false);
+                  }
+                }}
+                className="mt-2 w-full py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-xs transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-xs"
+              >
+                {cargandoAccion ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    Desvinculando...
+                  </>
+                ) : (
+                  'Desvincular WhatsApp'
+                )}
+              </button>
             </div>
           )}
 

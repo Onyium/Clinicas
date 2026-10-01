@@ -2,7 +2,8 @@ import express from 'express';
 import { 
   initWhatsAppSession, 
   getWhatsAppStatus, 
-  enviarMensajeCita 
+  enviarMensajeCita,
+  desconectarWhatsApp
 } from './whatsappService.js';
 
 const router = express.Router();
@@ -32,4 +33,14 @@ router.post('/enviar-cita', async (req, res) => {
   }
 });
 
+router.post('/desconectar/:clinicaId', async (req, res) => {
+  const { clinicaId } = req.params;
+  try {
+    const resultado = await desconectarWhatsApp(clinicaId);
+    res.json(resultado);
+  } catch (error) {
+    console.error('Error al desconectar WhatsApp:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 export default router;

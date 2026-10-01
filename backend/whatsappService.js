@@ -111,3 +111,26 @@ export const enviarMensajeCita = async (clinicaId, telefono, mensaje) => {
 
   return await session.sock.sendMessage(jid, { text: mensaje });
 };
+
+export const desconectarWhatsApp = async (clinicaId) => {
+  const session = sessions.get(clinicaId);
+  const sessionDir = path.resolve(`./auth_sessions/clinica_${clinicaId}`);
+
+  if (session?.sock) {
+    try {
+      await session.sock.logout();
+    } catch (err) {
+      console.warn('Error en socket logout (puede que ya estuviera cerrado):', err.message);
+    }
+  }
+
+  // Limpiar memoria
+  sessions.delete(clinicaId);
+
+  // Borrar carpeta de credenciales para forzar nuevo QR al reconectar
+  if (fs.existsSync(sessionDir)) {
+    fs.rmSync(sessionDir, { recursive: true, force: true });
+  }
+
+  return { ok: true, status: 'desconectado' };
+};
