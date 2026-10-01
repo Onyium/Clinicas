@@ -23,7 +23,7 @@ import {
   enviarMensajeCita 
 } from './whatsappService.js';
 
-import { enviarRecetaClinica } from './whatsappService.js';
+
 // Usamos import en lugar de require
 import { v2 as cloudinary } from 'cloudinary';
 import multer from 'multer';
