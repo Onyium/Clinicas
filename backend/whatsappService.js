@@ -134,3 +134,28 @@ export const desconectarWhatsApp = async (clinicaId) => {
 
   return { ok: true, status: 'desconectado' };
 };
+
+export const enviarRecetaClinica = async (clinicaId, telefono, datosReceta) => {
+  const session = sessions.get(String(clinicaId));
+
+  if (!session || session.status !== 'conectado') {
+    throw new Error('El WhatsApp de la clínica no está vinculado o activo.');
+  }
+
+  // Normalizar número a formato internacional (503 para El Salvador)
+  let limpio = String(telefono).replace(/\D/g, '');
+  if (!limpio.startsWith('503')) {
+    limpio = `503${limpio}`;
+  }
+  const jid = `${limpio}@s.whatsapp.net`;
+
+  // Construir el texto de la receta
+  const texto = `📋 *RECETA MÉDICA - ${datosReceta.nombre_clinica || 'CLÍNICA'}*\n` +
+    `👤 *Paciente:* ${datosReceta.paciente_nombre}\n` +
+    `👨‍⚕️ *Médico:* ${datosReceta.doctor_nombre || 'Médico tratante'}\n` +
+    `📅 *Fecha:* ${datosReceta.fecha || new Date().toLocaleDateString('es-SV')}\n\n` +
+    `💊 *Indicaciones / Medicamentos:*\n${datosReceta.indicaciones}\n\n` +
+    `_Favor seguir el tratamiento según las indicaciones dadas en consulta._`;
+
+  return await session.sock.sendMessage(jid, { text: texto });
+};

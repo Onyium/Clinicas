@@ -16,6 +16,7 @@ import {
   enviarRecordatorioPorCita
 } from './whatsapp.js';
 
+import { enviarRecetaClinica } from './whatsappService.js';
 // Usamos import en lugar de require
 import { v2 as cloudinary } from 'cloudinary';
 import multer from 'multer';
@@ -47,6 +48,24 @@ cron.schedule('0 9 * * *', () => {
   procesarRecordatoriosManana();
 });
 
+//WHATSAPP
+app.post('/api/recetas/enviar', async (req, res) => {
+  const { clinicaId = '1', paciente_telefono, paciente_nombre, indicaciones, doctor_nombre } = req.body;
+
+  try {
+    await enviarRecetaClinica(clinicaId, paciente_telefono, {
+      paciente_nombre,
+      doctor_nombre,
+      indicaciones,
+      nombre_clinica: 'Consultorio Maye'
+    });
+
+    res.json({ ok: true, mensaje: 'Receta enviada desde el WhatsApp vinculado' });
+  } catch (error) {
+    console.error('Error enviando receta:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
 // Endpoint para subir el logo
 app.post('/api/upload-logo', upload.single('logo'), async (req, res) => {
   try {
