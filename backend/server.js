@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import cron from 'node-cron';
 import bcrypt from 'bcryptjs';
 import { pool } from './db.js';
+import whatsappRoutes from './routes/whatsappRoutes.js';
 import { 
   connectToWhatsApp, 
   enviarMensajeReserva, 
@@ -26,6 +27,7 @@ dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use('/api/whatsapp', whatsappRoutes);
 
 // Configuración de Cloudinary
 cloudinary.config({

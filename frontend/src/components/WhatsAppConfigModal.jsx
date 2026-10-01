@@ -1,25 +1,31 @@
 import React, { useState, useEffect } from 'react';
+import api from '../api';
 
-export default function WhatsAppConfigModal({ clinicaId, isOpen, onClose }) {
-  const [estado, setEstado] = useState('cargando');
+export default function WhatsAppConfigModal({ clinicaId = '1', isOpen, onClose }) {
+  const [estado, setEstado] = useState('cargando'); // 'cargando' | 'esperando_qr' | 'conectado' | 'desconectado'
   const [qrSrc, setQrSrc] = useState(null);
+  const [cargandoAccion, setCargandoAccion] = useState(false);
 
   const consultarEstado = async () => {
     try {
-      const res = await fetch(`/api/whatsapp/estado/${clinicaId}`);
-      const data = await res.json();
-      setEstado(data.status);
-      setQrSrc(data.qr);
+      const res = await api.get(`/api/whatsapp/estado/${clinicaId}`);
+      if (res.data) {
+        setEstado(res.data.status);
+        setQrSrc(res.data.qr || null);
+      }
     } catch (error) {
-      console.error('Error al consultar estado de WhatsApp:', error);
+      console.error('Error consultando estado de WhatsApp:', error);
+      setEstado('desconectado');
     }
   };
 
   useEffect(() => {
     if (!isOpen) return;
 
+    // Consulta inicial al abrir el modal
     consultarEstado();
-    // Sondeo (polling) cada 3 segundos mientras no esté conectado
+
+    // Polling cada 3 segundos si aún no está conectado
     const interval = setInterval(() => {
       if (estado !== 'conectado') {
         consultarEstado();
@@ -27,62 +33,113 @@ export default function WhatsAppConfigModal({ clinicaId, isOpen, onClose }) {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [isOpen, estado]);
+  }, [isOpen, estado, clinicaId]);
+
+  const handleForzarReconexion = async () => {
+    setCargandoAccion(true);
+    setEstado('cargando');
+    setQrSrc(null);
+    try {
+      await api.get(`/api/whatsapp/estado/${clinicaId}`);
+    } catch (err) {
+      console.error('Error al forzar reconexión:', err);
+    } finally {
+      setCargandoAccion(false);
+    }
+  };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-      <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl space-y-4">
+      <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4 border border-slate-100">
+        
+        {/* Cabecera del Modal */}
         <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-          <h3 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-            📱 Conexión de WhatsApp
-          </h3>
+          <div className="flex items-center gap-2">
+            <span className="text-base">📱</span>
+            <h3 className="font-bold text-slate-800 text-sm">
+              Conexión de WhatsApp
+            </h3>
+          </div>
           <button 
             type="button" 
             onClick={onClose} 
-            className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+            className="text-slate-400 hover:text-slate-600 text-sm font-bold p-1 cursor-pointer transition"
           >
             ✕
           </button>
         </div>
 
-        <div className="text-center py-2 space-y-3">
+        {/* Contenedor de Estado Dinámico */}
+        <div className="text-center py-2 space-y-3 min-h-[220px] flex flex-col justify-center items-center">
+          
+          {/* 1. ESTADO: CONECTADO */}
           {estado === 'conectado' && (
-            <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-4 rounded-xl text-xs space-y-1">
-              <p className="font-bold text-sm">✅ Vinculado y Activo</p>
-              <p>Los recordatorios automáticos de citas saldrán desde el número de la clínica.</p>
+            <div className="w-full bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl text-xs space-y-2">
+              <div className="w-10 h-10 mx-auto bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-lg font-bold">
+                ✓
+              </div>
+              <p className="font-bold text-sm text-emerald-900">WhatsApp Vinculado</p>
+              <p className="text-emerald-700 leading-relaxed">
+                El sistema está listo. Los recordatorios de citas se enviarán de forma automática desde el número de la clínica.
+              </p>
             </div>
           )}
 
+          {/* 2. ESTADO: ESPERANDO ESCANEO DE QR */}
           {estado === 'esperando_qr' && qrSrc && (
-            <div className="space-y-3">
-              <p className="text-xs text-slate-500">
-                Abra WhatsApp en el celular del consultorio &gt; Dispositivos vinculados &gt; Escanee este código:
+            <div className="space-y-3 w-full">
+              <p className="text-xs text-slate-600 px-2 leading-tight">
+                Abra WhatsApp en el celular &gt; <strong>Dispositivos vinculados</strong> &gt; <strong>Vincular un dispositivo</strong>:
               </p>
               <div className="flex justify-center">
-                <img src={qrSrc} alt="Código QR WhatsApp" className="w-52 h-52 border rounded-xl p-1" />
+                <div className="p-2 bg-white border border-slate-200 rounded-2xl shadow-inner inline-block">
+                  <img 
+                    src={qrSrc} 
+                    alt="Código QR de WhatsApp" 
+                    className="w-48 h-48 rounded-lg object-contain"
+                  />
+                </div>
               </div>
+              <p className="text-[11px] text-slate-400">
+                El código se actualiza automáticamente cada 20 segundos.
+              </p>
             </div>
           )}
 
-          {(estado === 'conectando' || estado === 'cargando') && (
-            <div className="py-8 text-xs text-slate-400">
-              Generando enlace seguro...
+          {/* 3. ESTADO: CARGANDO / GENERANDO ENLACE */}
+          {(estado === 'cargando' || (estado === 'esperando_qr' && !qrSrc)) && (
+            <div className="py-8 space-y-3 text-slate-500">
+              <div className="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+              <p className="text-xs font-medium">Generando enlace seguro con el servidor...</p>
             </div>
           )}
 
+          {/* 4. ESTADO: DESCONECTADO O ERROR */}
           {estado === 'desconectado' && (
-            <div className="bg-rose-50 border border-rose-200 text-rose-700 p-3 rounded-xl text-xs">
-              ⚠️ Sesión desconectada. Cargue de nuevo para generar el código.
+            <div className="w-full bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-xl text-xs space-y-3">
+              <p className="font-bold text-sm text-rose-900">Sesión no iniciada</p>
+              <p className="text-rose-700">
+                No hay una sesión activa o se perdió la conexión con el teléfono.
+              </p>
+              <button
+                type="button"
+                onClick={handleForzarReconexion}
+                disabled={cargandoAccion}
+                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-xs transition cursor-pointer disabled:opacity-50"
+              >
+                {cargandoAccion ? 'Cargando...' : 'Reintentar vinculación'}
+              </button>
             </div>
           )}
         </div>
 
+        {/* Botón Inferior */}
         <button
           type="button"
           onClick={onClose}
-          className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition"
+          className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
         >
           Cerrar
         </button>
