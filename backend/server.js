@@ -5,6 +5,7 @@ import cron from 'node-cron';
 import bcrypt from 'bcryptjs';
 import { pool } from './db.js';
 import whatsappRoutes from './whatsappRoutes.js';
+/*
 import { 
   connectToWhatsApp, 
   enviarMensajeReserva, 
@@ -15,6 +16,12 @@ import {
   procesarRecordatoriosMedicamentos,
   enviarRecordatorioPorCita
 } from './whatsapp.js';
+*/
+
+import { 
+  enviarRecetaClinica, 
+  enviarMensajeCita 
+} from './whatsappService.js';
 
 import { enviarRecetaClinica } from './whatsappService.js';
 // Usamos import en lugar de require
@@ -40,7 +47,7 @@ cloudinary.config({
 // Usar el directorio temporal del sistema para no tener problemas en producción
 const upload = multer({ dest: os.tmpdir() });
 
-connectToWhatsApp();
+//connectToWhatsApp();
 
 // Cron job diario a las 09:00 AM
 cron.schedule('0 9 * * *', () => {
@@ -318,31 +325,16 @@ app.post('/api/citas', async (req, res) => {
     });
 
     setImmediate(async () => {
-      try {
-        if (typeof enviarMensajeReserva === 'function' && paciente_telefono) {
-          await enviarMensajeReserva({
-            id: nuevaCitaId,
-            cita_id: nuevaCitaId,
-            paciente_nombre,
-            nombre: paciente_nombre,
-            paciente_telefono,
-            telefono: paciente_telefono,
-            doctor_nombre: doctor_nombre || 'Dra. Liseyda Maye',
-            doctor: doctor_nombre || 'Dra. Liseyda Maye',
-            fecha_cita,
-            fecha: fecha_cita,
-            hora_cita,
-            hora: hora_cita,
-            indicaciones: indicaciones || ''
-          });
-          console.log(`✅ [WhatsApp Cita] Notificación enviada a ${paciente_nombre}`);
-        } else {
-          console.warn('⚠️ No se envió WhatsApp: teléfono no proporcionado o función no disponible.');
-        }
-      } catch (waErr) {
-        console.error('❌ [WhatsApp Cita Error Background]:', waErr.message || waErr);
-      }
-    });
+  try {
+    if (paciente_telefono) {
+      const mensaje = `Hola *${paciente_nombre}*, su cita ha sido reservada con éxito para el día *${fecha_cita}* a las *${hora_cita}* con ${doctor_nombre || 'el médico'}.`;
+      await enviarMensajeCita('1', paciente_telefono, mensaje);
+      console.log(`✅ [WhatsApp Cita] Enviado desde el WhatsApp vinculado.`);
+    }
+  } catch (waErr) {
+    console.error('❌ [WhatsApp Cita Error]:', waErr.message);
+  }
+});
 
   } catch (dbErr) {
     console.error('❌ Error guardando cita en MySQL:', dbErr);
@@ -477,13 +469,22 @@ app.post('/api/recetas/multiple', async (req, res) => {
 
     res.json({ message: 'Receta guardada con éxito' });
 
-    setImmediate(() => {
-      if (typeof enviarRecetaCompleta === 'function') {
-        enviarRecetaCompleta({ paciente_nombre, paciente_telefono, doctor_nombre, medicamentos })
-          .then(() => console.log(`[Receta] WhatsApp entregado a ${paciente_nombre}`))
-          .catch((err) => console.error('[WhatsApp Receta Error Background]:', err.message));
-      }
-    });
+    setImmediate(async () => {
+  try {
+    if (paciente_telefono) {
+      const medTexto = medicamentos.map(m => `• *${m.medicamento}*: ${m.frecuencia || 'Cada 8 hrs'} durante ${m.dias_tratamiento || 5} días`).join('\n');
+      await enviarRecetaClinica('1', paciente_telefono, {
+        paciente_nombre,
+        doctor_nombre,
+        indicaciones: medTexto,
+        nombre_clinica: 'Consultorio Maye'
+      });
+      console.log(`✅ [WhatsApp Receta] Enviada desde el WhatsApp vinculado.`);
+    }
+  } catch (err) {
+    console.error('❌ [WhatsApp Receta Error]:', err.message);
+  }
+});
 
   } catch (error) {
     console.error('Error insertando receta en MySQL:', error);
