@@ -20,9 +20,9 @@ import {
 
 import { 
   enviarRecetaClinica, 
-  enviarMensajeCita 
+  enviarMensajeCita,
+  enviarResumenConsulta 
 } from './whatsappService.js';
-
 
 // Usamos import en lugar de require
 import { v2 as cloudinary } from 'cloudinary';
@@ -760,6 +760,9 @@ app.get('/api/pacientes/:id', async (req, res) => {
 // ==========================================
 // CONSULTAS MÉDICAS (CON SIGNOS VITALES COMPLETOS)
 // ==========================================
+// ==========================================
+// CONSULTAS MÉDICAS (CON SIGNOS VITALES COMPLETOS)
+// ==========================================
 app.post('/api/consultas-independientes', async (req, res) => {
   const {
     paciente_id,
@@ -776,7 +779,9 @@ app.post('/api/consultas-independientes', async (req, res) => {
     temperatura,
     presion_arterial,
     medicamentos,
-    frecuencia_cardiaca
+    frecuencia_cardiaca,
+    enviar_whatsapp,          // 👈 Recibimos el switch del frontend
+    estudios_solicitados      // 👈 Recibimos los estudios si los envía
   } = req.body;
 
   if (!paciente_id) {
@@ -786,8 +791,8 @@ app.post('/api/consultas-independientes', async (req, res) => {
   try {
     const [result] = await pool.query(
       `INSERT INTO consultas_medicas 
-       (paciente_id, doctor_nombre, motivo_consulta, enfermedad_actual, antecedentes_patologicos, examen_fisico, reporte_examenes, diagnostico, plan_tratamiento, peso, talla, temperatura, presion_arterial, frecuencia_cardiaca)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (paciente_id, doctor_nombre, motivo_consulta, enfermedad_actual, antecedentes_patologicos, examen_fisico, reporte_examenes, diagnostico, plan_tratamiento, peso, talla, temperatura, presion_arterial, frecuencia_cardiaca)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         paciente_id,
         doctor_nombre || 'Dr(a). Consulta',
@@ -823,8 +828,8 @@ app.post('/api/consultas-independientes', async (req, res) => {
 
         await pool.query(
           `INSERT INTO recetas_medicamentos 
-           (consulta_id, paciente_id, paciente_nombre, paciente_telefono, medicamento, dosis_indicacion, fecha_inicio, dias_tratamiento, hora_recordatorio, activo)
-           VALUES (?, ?, ?, ?, ?, ?, CURDATE(), ?, '08:00:00', TRUE)`,
+            (consulta_id, paciente_id, paciente_nombre, paciente_telefono, medicamento, dosis_indicacion, fecha_inicio, dias_tratamiento, hora_recordatorio, activo)
+            VALUES (?, ?, ?, ?, ?, ?, CURDATE(), ?, '08:00:00', TRUE)`,
           [
             consultaId,
             paciente_id,
@@ -838,6 +843,27 @@ app.post('/api/consultas-independientes', async (req, res) => {
       }
     }
 
+    // 👉 AQUÍ PEGAS EL BLOQUE DE ENVÍO DE WHATSAPP:
+    if (enviar_whatsapp && pac.telefono) {
+      setImmediate(async () => {
+        try {
+          await enviarResumenConsulta('1', pac.telefono, {
+            nombre_clinica: 'Consultorio Maye',
+            paciente_nombre: pac.nombre,
+            doctor_nombre,
+            diagnostico,
+            plan_tratamiento,
+            medicamentos: medicamentos || [],
+            estudios: estudios_solicitados || []
+          });
+          console.log(`✅ [WhatsApp] Resumen integral entregado a ${pac.nombre}`);
+        } catch (err) {
+          console.error('❌ Error enviando resumen integral:', err.message);
+        }
+      });
+    }
+
+    // Respuesta final al navegador
     res.json({ ok: true, id: consultaId, mensaje: 'Consulta y receta guardadas' });
   } catch (err) {
     console.error('Error al registrar consulta y medicamentos:', err);

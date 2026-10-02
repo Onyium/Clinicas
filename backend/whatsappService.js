@@ -135,27 +135,63 @@ export const desconectarWhatsApp = async (clinicaId) => {
   return { ok: true, status: 'desconectado' };
 };
 
-export const enviarRecetaClinica = async (clinicaId, telefono, datosReceta) => {
+export const enviarResumenConsulta = async (clinicaId, telefono, datos) => {
   const session = sessions.get(String(clinicaId));
 
   if (!session || session.status !== 'conectado') {
     throw new Error('El WhatsApp de la clínica no está vinculado o activo.');
   }
 
-  // Normalizar número a formato internacional (503 para El Salvador)
+  // Normalizar número a formato SV
   let limpio = String(telefono).replace(/\D/g, '');
-  if (!limpio.startsWith('503')) {
-    limpio = `503${limpio}`;
-  }
+  if (limpio.length === 8) limpio = `503${limpio}`;
   const jid = `${limpio}@s.whatsapp.net`;
 
-  // Construir el texto de la receta
-  const texto = `📋 *RECETA MÉDICA - ${datosReceta.nombre_clinica || 'CLÍNICA'}*\n` +
-    `👤 *Paciente:* ${datosReceta.paciente_nombre}\n` +
-    `👨‍⚕️ *Médico:* ${datosReceta.doctor_nombre || 'Médico tratante'}\n` +
-    `📅 *Fecha:* ${datosReceta.fecha || new Date().toLocaleDateString('es-SV')}\n\n` +
-    `💊 *Indicaciones / Medicamentos:*\n${datosReceta.indicaciones}\n\n` +
-    `_Favor seguir el tratamiento según las indicaciones dadas en consulta._`;
+  // Construcción del texto
+  let mensaje = `📋 *RESUMEN DE CONSULTA MÉDICA*\n`;
+  mensaje += `🏥 *${datos.nombre_clinica || 'Consultorio Médico'}*\n`;
+  mensaje += `━━━━━━━━━━━━━━━━━━━━━\n`;
+  mensaje += `👤 *Paciente:* ${datos.paciente_nombre}\n`;
+  mensaje += `👨‍⚕️ *Médico:* ${datos.doctor_nombre || 'Médico tratante'}\n`;
+  mensaje += `📅 *Fecha:* ${datos.fecha || new Date().toLocaleDateString('es-SV')}\n\n`;
 
-  return await session.sock.sendMessage(jid, { text: texto });
+  if (datos.diagnostico) {
+    mensaje += `📝 *DIAGNÓSTICO:*\n${datos.diagnostico}\n\n`;
+  }
+
+  // Sección de medicamentos
+  if (Array.isArray(datos.medicamentos) && datos.medicamentos.length > 0) {
+    mensaje += `💊 *TRATAMIENTO / MEDICAMENTOS:*\n`;
+    datos.medicamentos.forEach((m) => {
+      const med = m.medicamento || m.nombre;
+      const dosis = m.frecuencia || 'Según indicación';
+      const tiempo = m.dias_tratamiento ? ` por ${m.dias_tratamiento} días` : '';
+      const nota = m.indicacion ? `\n  _${m.indicacion}_` : '';
+      mensaje += `• *${med}*: ${dosis}${tiempo}${nota}\n`;
+    });
+    mensaje += `\n`;
+  }
+
+  // Sección de laboratorios / estudios
+  if (datos.estudios && datos.estudios.length > 0) {
+    mensaje += `🧪 *ESTUDIOS / LABORATORIOS INDICADOS:*\n`;
+    if (Array.isArray(datos.estudios)) {
+      datos.estudios.forEach((e) => {
+        mensaje += `• ${typeof e === 'string' ? e : e.tipo_estudio || e.nombre}\n`;
+      });
+    } else {
+      mensaje += `${datos.estudios}\n`;
+    }
+    mensaje += `\n`;
+  }
+
+  // Indicaciones o plan general
+  if (datos.plan_tratamiento) {
+    mensaje += `📌 *INDICACIONES GENERALES:*\n${datos.plan_tratamiento}\n\n`;
+  }
+
+  mensaje += `━━━━━━━━━━━━━━━━━━━━━\n`;
+  mensaje += `_Comprobante informativo emitido por su médico tratante._`;
+
+  return await session.sock.sendMessage(jid, { text: mensaje.trim() });
 };

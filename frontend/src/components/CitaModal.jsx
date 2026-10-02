@@ -182,21 +182,7 @@ export default function CitaModal({
             />
           </div>
 
-          {/* Opción de emitir receta digital inmediata */}
-          {!selectedId && (
-            <div className="flex items-center gap-2 pt-1">
-              <input
-                type="checkbox"
-                id="checkReceta"
-                checked={incluirReceta}
-                onChange={(e) => setIncluirReceta(e.target.checked)}
-                className="rounded text-emerald-600 w-4 h-4 cursor-pointer"
-              />
-              <label htmlFor="checkReceta" className="text-xs text-slate-700 font-medium cursor-pointer">
-                💊 Emitir receta digital inmediatamente después de crear la cita
-              </label>
-            </div>
-          )}
+          
 
           <div className="flex items-center justify-between pt-3 border-t border-slate-100">
             {selectedId ? (

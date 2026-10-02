@@ -11,6 +11,8 @@ import HistorialConsultas from './expediente/HistorialConsultas';
 import DocumentosTab from './expediente/DocumentosTab';
 
 
+const [enviarPorWhatsApp, setEnviarPorWhatsApp] = useState(true);
+
 function calcularEdadDesdeFecha(fechaNacimiento) {
   if (!fechaNacimiento) return '';
   const hoy = new Date();
@@ -377,6 +379,17 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
             </h3>
             {seccionActiva === 'inicio' && (modoCrear || modoEditar) && (
               <div className="flex gap-2">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={enviarPorWhatsApp}
+                    onChange={(e) => setEnviarPorWhatsApp(e.target.checked)}
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
+                  />
+                  <span className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                    📲 Enviar receta por WhatsApp al guardar
+                  </span>
+                </label>
                 <button onClick={() => { setModoCrear(false); setModoEditar(false); }} className="bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold px-3 py-1.5 rounded-xl transition cursor-pointer">Cancelar</button>
                 <button onClick={handleGuardarConsulta} disabled={guardando} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-1.5 rounded-xl shadow-xs transition cursor-pointer">
                   {guardando ? 'Guardando...' : '💾 Guardar Todo'}
