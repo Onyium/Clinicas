@@ -495,25 +495,42 @@ app.post('/api/recetas/multiple', async (req, res) => {
 // MÓDULO DE PACIENTES Y EXPEDIENTES
 // ==========================================
 app.get('/api/pacientes', async (req, res) => {
-  const usuarioId = req.headers['x-usuario-id'] || 1;
-  const q = req.query.q || '';
+  // 1. Obtener y validar el ID del usuario/doctor actual
+  const rawId = req.headers['x-usuario-id'];
+  const usuarioId = rawId && rawId !== 'undefined' ? parseInt(rawId, 10) : null;
+
+  if (!usuarioId) {
+    return res.status(401).json({ error: 'No autorizado: falta identificador de usuario válido' });
+  }
+
+  const q = (req.query.q || '').trim();
+
   try {
     const [rows] = await pool.query(
       `SELECT * FROM pacientes 
-       WHERE usuario_id = ? AND (nombre LIKE ? OR telefono LIKE ?) 
+       WHERE usuario_id = ? 
+         AND (nombre LIKE ? OR telefono LIKE ?) 
        ORDER BY id DESC`,
       [usuarioId, `%${q}%`, `%${q}%`]
     );
     res.json(rows);
   } catch (err) {
+    console.error('Error al obtener pacientes:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
 app.post('/api/pacientes', async (req, res) => {
-  const usuarioId = req.headers['x-usuario-id'] || 1;
+  // 1. Obtener y validar el ID del usuario/doctor actual
+  const rawId = req.headers['x-usuario-id'];
+  const usuarioId = rawId && rawId !== 'undefined' ? parseInt(rawId, 10) : null;
+
+  if (!usuarioId) {
+    return res.status(401).json({ error: 'No autorizado: falta identificador de usuario válido' });
+  }
+
   const { 
-    id, // 👈 Si viene id, se redirige a UPDATE para evitar duplicados
+    id, // 👈 Si viene id, se actualiza solo si le pertenece al doctor logueado
     nombre, 
     telefono, 
     fecha_nacimiento, 
@@ -530,7 +547,8 @@ app.post('/api/pacientes', async (req, res) => {
   
   try {
     if (id) {
-      await pool.query(
+      // ✅ UPDATE blindado: solo actualiza si el paciente le pertenece a este usuario_id
+      const [updateResult] = await pool.query(
         `UPDATE pacientes SET 
           nombre = ?,
           telefono = ?,
@@ -544,7 +562,7 @@ app.post('/api/pacientes', async (req, res) => {
           responsable_nombre = ?,
           responsable_parentesco = ?,
           responsable_telefono = ?
-        WHERE id = ?`,
+        WHERE id = ? AND usuario_id = ?`,
         [
           nombre,
           telefono || null,
@@ -558,12 +576,19 @@ app.post('/api/pacientes', async (req, res) => {
           responsable_nombre || null,
           responsable_parentesco || null,
           responsable_telefono || null,
-          id
+          id,
+          usuarioId
         ]
       );
+
+      if (updateResult.affectedRows === 0) {
+        return res.status(403).json({ error: 'No tienes permiso para modificar este paciente' });
+      }
+
       return res.json({ ok: true, id, mensaje: 'Paciente actualizado exitosamente' });
     }
 
+    // ✅ INSERT garantizado para el doctor logueado
     const [result] = await pool.query(
       `INSERT INTO pacientes (
         usuario_id, nombre, telefono, fecha_nacimiento, sexo, alergias, 
@@ -586,13 +611,13 @@ app.post('/api/pacientes', async (req, res) => {
         responsable_telefono || null
       ]
     );
+
     res.json({ ok: true, id: result.insertId, mensaje: 'Paciente registrado exitosamente' });
   } catch (err) {
     console.error('Error al registrar paciente:', err);
     res.status(500).json({ error: err.message });
   }
 });
-
 app.put('/api/pacientes/:id', async (req, res) => {
   const { id } = req.params;
   const {
