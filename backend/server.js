@@ -20,7 +20,6 @@ import {
 
 import { 
   enviarRecetaClinica, 
-  enviarMensajeCita,
   enviarResumenConsulta 
 } from './whatsappService.js';
 
