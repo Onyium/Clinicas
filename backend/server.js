@@ -260,17 +260,14 @@ app.post('/api/test/enviar-recordatorio-cita/:cita_id', async (req, res) => {
 // ==========================================
 // CITAS Y CALENDARIO
 // ==========================================
+// ✅ BIEN: Solo trae las citas del doctor que está navegando
 app.get('/api/citas', async (req, res) => {
   const usuarioId = req.headers['x-usuario-id'] || 1;
-  try {
-    const [rows] = await pool.query(
-      'SELECT * FROM citas WHERE usuario_id = ? ORDER BY fecha_cita ASC, hora_cita ASC',
-      [usuarioId]
-    );
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const [rows] = await pool.query(
+    'SELECT * FROM citas WHERE usuario_id = ? ORDER BY fecha DESC', 
+    [usuarioId]
+  );
+  res.json(rows);
 });
 
 app.post('/api/citas', async (req, res) => {
