@@ -970,28 +970,32 @@ app.put(['/api/consultas/:id', '/api/consultas-independientes/:id'], async (req,
       }
     }
 
-    // 3. ENVÍO DE RESUMEN POR WHATSAPP
     const telefonoDestino = paciente_telefono || pac.telefono;
-    console.log('🔍 [Intento WhatsApp]:', { enviar_whatsapp, telefonoDestino });
 
-    if (enviar_whatsapp && telefonoDestino) {
-      setImmediate(async () => {
-        try {
-          await enviarResumenConsulta('1', telefonoDestino, {
-            nombre_clinica: 'Consultorio Maye',
-            paciente_nombre: pac.nombre || req.body.paciente_nombre || 'Estimado(a) Paciente',
-            doctor_nombre: doctor_nombre || 'Médico tratante',
-            diagnostico,
-            plan_tratamiento,
-            medicamentos: medicamentos || [],
-            estudios: estudios_solicitados || []
-          });
-          console.log(`✅ [WhatsApp] Resumen entregado a ${telefonoDestino}`);
-        } catch (err) {
-          console.error('❌ [WhatsApp Error]:', err.message);
-        }
+// 👉 Si viene undefined, le decimos que sea true por defecto
+const debeEnviar = req.body.enviar_whatsapp !== false; 
+
+console.log('🔍 [Intento WhatsApp]:', { debeEnviar, telefonoDestino });
+
+if (debeEnviar && telefonoDestino) {
+  setImmediate(async () => {
+    try {
+      await enviarResumenConsulta('1', telefonoDestino, {
+        nombre_clinica: 'Consultorio Maye',
+        paciente_nombre: pac.nombre || req.body.paciente_nombre || 'Estimado(a) Paciente',
+        doctor_nombre: doctor_nombre || 'Médico tratante',
+        diagnostico,
+        plan_tratamiento,
+        medicamentos: medicamentos || [],
+        estudios: estudios_solicitados || []
       });
+      console.log(`✅ [WhatsApp] Resumen entregado a ${telefonoDestino}`);
+    } catch (err) {
+      console.error('❌ [WhatsApp Error]:', err.message);
     }
+  });
+}
+    
 
     res.json({ ok: true, mensaje: 'Consulta y recetas actualizadas correctamente' });
   } catch (err) {
