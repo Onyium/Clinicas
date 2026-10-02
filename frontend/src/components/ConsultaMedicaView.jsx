@@ -67,7 +67,7 @@ export default function ConsultaMedicaView({ cita, onVolver }) {
     e.preventDefault();
     setGuardando(true);
     try {
-      await api.put(`/api/consultas/${cita.id}`, {
+      await api.put(`/api/consultas-independientes/${cita.id}`, {
         ...form,
         medicamentos: medicamentos.filter(m => m.medicamento.trim() !== ''),
         enviar_whatsapp: enviarPorWhatsApp, // 👈 Pasamos el estado del toggle
