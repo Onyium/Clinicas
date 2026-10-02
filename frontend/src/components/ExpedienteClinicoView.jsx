@@ -11,7 +11,7 @@ import HistorialConsultas from './expediente/HistorialConsultas';
 import DocumentosTab from './expediente/DocumentosTab';
 
 
-const [enviarPorWhatsApp, setEnviarPorWhatsApp] = useState(true);
+
 
 function calcularEdadDesdeFecha(fechaNacimiento) {
   if (!fechaNacimiento) return '';
@@ -45,6 +45,7 @@ export default function ExpedienteClinicoView({ pacienteId, onVolver, onAgendarC
   const [modoCrear, setModoCrear] = useState(false);
   const [modoEditar, setModoEditar] = useState(false);
   const [consultaSeleccionada, setConsultaSeleccionada] = useState(null);
+  const [enviarPorWhatsApp, setEnviarPorWhatsApp] = useState(true);
 
   const [formConsulta, setFormConsulta] = useState({
     doctor_nombre: 'Dra. Liseyda Maye', 
