@@ -497,12 +497,12 @@ export default function App() {
         onClose={() => setIsRecetaOpen(false)}
         cita={citaParaReceta}
       />
+      
       <WhatsAppConfigModal
-        clinicaId="1"
+        clinicaId={localStorage.getItem('clinic_user_id') || '1'}
         isOpen={abrirModalWhatsApp}
         onClose={() => setAbrirModalWhatsApp(false)}
       />
-      
 
       
       <Toaster 

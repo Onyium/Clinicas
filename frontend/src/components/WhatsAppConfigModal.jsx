@@ -2,9 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import api from '../api';
 
 export default function WhatsAppConfigModal({ clinicaId, isOpen, onClose }) {
-  // 1. Obtener dinámicamente el ID del doctor logueado con fallback seguro
-  const usuarioLocal = JSON.parse(localStorage.getItem('usuario') || '{}');
-  const targetId = String(clinicaId || usuarioLocal.id || '1');
+  // 1. Priorizar 'clinic_user_id' (como lo guarda tu sistema en main)
+  const storedUserId = localStorage.getItem('clinic_user_id');
+  const targetId = String(
+    storedUserId || (clinicaId && clinicaId !== '1' ? clinicaId : '1')
+  );
 
   const [estado, setEstado] = useState('cargando'); // 'cargando' | 'esperando_qr' | 'conectado' | 'desconectado'
   const [qrSrc, setQrSrc] = useState(null);
@@ -44,9 +46,14 @@ export default function WhatsAppConfigModal({ clinicaId, isOpen, onClose }) {
     setEstado('cargando');
     setQrSrc(null);
     try {
-      await api.get(`/api/whatsapp/estado/${targetId}`);
+      const res = await api.get(`/api/whatsapp/estado/${targetId}`);
+      if (res.data) {
+        setEstado(res.data.status);
+        setQrSrc(res.data.qr || null);
+      }
     } catch (err) {
       console.error('Error al forzar reconexión:', err);
+      setEstado('desconectado');
     } finally {
       setCargandoAccion(false);
     }
