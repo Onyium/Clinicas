@@ -5,25 +5,13 @@ import cron from 'node-cron';
 import bcrypt from 'bcryptjs';
 import { pool } from './db.js';
 import whatsappRoutes from './whatsappRoutes.js';
-/*
-import { 
-  connectToWhatsApp, 
-  enviarMensajeReserva, 
-  notificarEdicionCita,
-  cancelarJornadaYNotificar,
-  procesarRecordatoriosManana,
-  enviarRecetaCompleta,
-  procesarRecordatoriosMedicamentos,
-  enviarRecordatorioPorCita
-} from './whatsapp.js';
-*/
 
 import { 
+  enviarMensajeCita,
   enviarRecetaClinica, 
   enviarResumenConsulta 
 } from './whatsappService.js';
 
-// Usamos import en lugar de require
 import { v2 as cloudinary } from 'cloudinary';
 import multer from 'multer';
 import os from 'os';
@@ -43,55 +31,28 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Usar el directorio temporal del sistema para no tener problemas en producción
 const upload = multer({ dest: os.tmpdir() });
 
-//connectToWhatsApp();
-
-// Cron job diario a las 09:00 AM
-cron.schedule('0 9 * * *', () => {
-  console.log('⏰ [Cron] Ejecutando recordatorios automáticos...');
-  procesarRecordatoriosManana();
-});
-
-//WHATSAPP
-app.post('/api/recetas/enviar', async (req, res) => {
-  const { clinicaId = '1', paciente_telefono, paciente_nombre, indicaciones, doctor_nombre } = req.body;
-
+// ==========================================
+// AUTO-REPARACIÓN DE DATOS HUÉRFANOS AL INICIAR
+// ==========================================
+(async () => {
   try {
-    await enviarRecetaClinica(clinicaId, paciente_telefono, {
-      paciente_nombre,
-      doctor_nombre,
-      indicaciones,
-      nombre_clinica: 'Consultorio Maye'
-    });
-
-    res.json({ ok: true, mensaje: 'Receta enviada desde el WhatsApp vinculado' });
-  } catch (error) {
-    console.error('Error enviando receta:', error);
-    res.status(500).json({ ok: false, error: error.message });
+    // Asegura que los pacientes y citas creados antes tengan usuario_id = 1 (Dra. Liseyda)
+    // Así nunca se mezclan con los doctores nuevos (ID 2, 3, etc.)
+    await pool.query('UPDATE pacientes SET usuario_id = 1 WHERE usuario_id IS NULL OR usuario_id = 0');
+    await pool.query('UPDATE citas SET usuario_id = 1 WHERE usuario_id IS NULL OR usuario_id = 0');
+    console.log('🛡️ [BD] Aislamiento multi-doctor verificado correctamente.');
+  } catch (err) {
+    console.warn('⚠️ [BD] Aviso al verificar aislamiento:', err.message);
   }
-});
-// Endpoint para subir el logo
-app.post('/api/upload-logo', upload.single('logo'), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: 'No se envió ninguna imagen' });
+})();
 
-    // Subir a Cloudinary
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      folder: 'clinica_logos', // Crea una carpeta organizada en tu Cloudinary
-    });
-
-    // Borrar el archivo temporal del servidor local
-    fs.unlinkSync(req.file.path);
-
-    // Devolver la URL segura que nos da Cloudinary
-    res.json({ url: result.secure_url });
-  } catch (error) {
-    console.error('Error subiendo logo:', error);
-    res.status(500).json({ error: 'Error al subir la imagen a Cloudinary' });
-  }
-});
+// Helper para obtener siempre el ID del doctor logueado
+function obtenerUsuarioId(req) {
+  const rawId = req.headers['x-usuario-id'] || req.body?.usuario_id || req.body?.clinicaId;
+  return (rawId && rawId !== 'undefined' && !isNaN(rawId)) ? parseInt(rawId, 10) : 1;
+}
 
 // Función utilitaria para calcular hora de fin
 function calcularHoraFin(horaInicio, duracionMinutos) {
@@ -104,11 +65,47 @@ function calcularHoraFin(horaInicio, duracionMinutos) {
 }
 
 // ==========================================
+// WHATSAPP DIRECTO
+// ==========================================
+app.post('/api/recetas/enviar', async (req, res) => {
+  const sessionKey = String(obtenerUsuarioId(req));
+  const { paciente_telefono, paciente_nombre, indicaciones, doctor_nombre } = req.body;
+
+  try {
+    await enviarRecetaClinica(sessionKey, paciente_telefono, {
+      paciente_nombre,
+      doctor_nombre,
+      indicaciones,
+      nombre_clinica: req.body.nombre_clinica || 'Consultorio Médico'
+    });
+
+    res.json({ ok: true, mensaje: 'Receta enviada desde el WhatsApp vinculado' });
+  } catch (error) {
+    console.error('Error enviando receta:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+// Endpoint para subir el logo
+app.post('/api/upload-logo', upload.single('logo'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No se envió ninguna imagen' });
+
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: 'clinica_logos',
+    });
+
+    fs.unlinkSync(req.file.path);
+    res.json({ url: result.secure_url });
+  } catch (error) {
+    console.error('Error subiendo logo:', error);
+    res.status(500).json({ error: 'Error al subir la imagen a Cloudinary' });
+  }
+});
+
+// ==========================================
 // AUTENTICACIÓN
 // ==========================================
-// Asegúrate de importar bcrypt arriba en server.js:
-// import bcrypt from 'bcrypt';  (o const bcrypt = require('bcrypt'); si usas CommonJS)
-
 app.post('/api/login', async (req, res) => {
   const { usuario, password } = req.body;
 
@@ -117,10 +114,10 @@ app.post('/api/login', async (req, res) => {
   }
 
   try {
-    // 1. Buscamos el usuario por su nombre de usuario (sin filtrar por password todavía)
+    const cleanUser = String(usuario).trim();
     const [rows] = await pool.query(
       'SELECT id, usuario, password, nombre FROM usuarios WHERE usuario = ?',
-      [usuario]
+      [cleanUser]
     );
 
     if (rows.length === 0) {
@@ -130,14 +127,11 @@ app.post('/api/login', async (req, res) => {
     const user = rows[0];
     let passwordValido = false;
 
-    // 2. ¿La contraseña ya está encriptada con bcrypt?
     if (user.password && (user.password.startsWith('$2b$') || user.password.startsWith('$2a$'))) {
       passwordValido = await bcrypt.compare(password, user.password);
     } else {
-      // 3. Si aún está en texto plano (como ahorita)
       passwordValido = (password === user.password);
 
-      // Si coincidió, la encriptamos de una vez en segundo plano para que quede segura
       if (passwordValido) {
         const nuevoHash = await bcrypt.hash(password, 10);
         await pool.query('UPDATE usuarios SET password = ? WHERE id = ?', [nuevoHash, user.id]);
@@ -149,7 +143,6 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
-    // 4. Devolvemos los datos del usuario (sin exponer la contraseña)
     res.json({
       ok: true,
       usuario: {
@@ -158,18 +151,19 @@ app.post('/api/login', async (req, res) => {
         nombre: user.nombre
       }
     });
-
   } catch (err) {
     console.error('Error en /api/login:', err);
     res.status(500).json({ error: err.message });
   }
 });
+
 // ==========================================
-// CONFIGURACIÓN DE LA CLÍNICA (ÚNICA Y BLINDADA)
+// CONFIGURACIÓN DE LA CLÍNICA
 // ==========================================
 app.get('/api/configuracion', async (req, res) => {
+  const usuarioId = obtenerUsuarioId(req);
   try {
-    const [rows] = await pool.query('SELECT * FROM configuracion WHERE id = 1');
+    const [rows] = await pool.query('SELECT * FROM configuracion WHERE id = ? OR id = 1 ORDER BY id DESC LIMIT 1', [usuarioId]);
     res.json(rows[0] || { nombre_clinica: 'Consultorio Médico' });
   } catch (err) {
     console.error('Error al obtener configuracion:', err);
@@ -178,6 +172,7 @@ app.get('/api/configuracion', async (req, res) => {
 });
 
 app.put('/api/configuracion', async (req, res) => {
+  const usuarioId = obtenerUsuarioId(req);
   const { 
     nombre_clinica, 
     eslogan, 
@@ -198,7 +193,7 @@ app.put('/api/configuracion', async (req, res) => {
         id, nombre_clinica, eslogan, telefono_clinica, direccion, logo_url, 
         hora_apertura, hora_cierre, duracion_defecto_minutos, jvpm, horario_atencion, nombre_doctor
       ) VALUES (
-        1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       )
       ON DUPLICATE KEY UPDATE
         nombre_clinica = VALUES(nombre_clinica),
@@ -213,6 +208,7 @@ app.put('/api/configuracion', async (req, res) => {
         horario_atencion = VALUES(horario_atencion),
         nombre_doctor = VALUES(nombre_doctor)
     `, [
+      usuarioId,
       nombre_clinica || 'Consultorio Médico',
       eslogan || null,
       telefono_clinica || null,
@@ -234,44 +230,26 @@ app.put('/api/configuracion', async (req, res) => {
 });
 
 // ==========================================
-// RECORDATORIOS Y PRUEBAS
+// CITAS Y CALENDARIO (CORREGIDO Y AISLADO POR DOCTOR)
 // ==========================================
-app.get('/api/test/enviar-recordatorios', async (req, res) => {
+app.get('/api/citas', async (req, res) => {
+  const usuarioId = obtenerUsuarioId(req);
   try {
-    console.log('\n🧪 [TEST] Ejecutando recordatorios de medicamentos...');
-    await procesarRecordatoriosMedicamentos();
-    res.json({ ok: true, mensaje: 'Recordatorios ejecutados exitosamente en segundo plano' });
+    // ✅ Corregido: Ordenar por fecha_cita y hora_cita (antes decía "fecha" y daba Error 500)
+    const [rows] = await pool.query(
+      'SELECT * FROM citas WHERE usuario_id = ? ORDER BY fecha_cita DESC, hora_cita ASC', 
+      [usuarioId]
+    );
+    res.json(rows);
   } catch (err) {
-    console.error('Error en prueba manual de recordatorios:', err);
+    console.error('❌ Error en GET /api/citas:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-app.post('/api/test/enviar-recordatorio-cita/:cita_id', async (req, res) => {
-  const { cita_id } = req.params;
-  try {
-    await enviarRecordatorioPorCita(cita_id);
-    res.json({ ok: true, mensaje: `Recordatorio enviado para la cita #${cita_id}` });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-// ==========================================
-// CITAS Y CALENDARIO
-// ==========================================
-// ✅ BIEN: Solo trae las citas del doctor que está navegando
-app.get('/api/citas', async (req, res) => {
-  const usuarioId = req.headers['x-usuario-id'] || 1;
-  const [rows] = await pool.query(
-    'SELECT * FROM citas WHERE usuario_id = ? ORDER BY fecha DESC', 
-    [usuarioId]
-  );
-  res.json(rows);
-});
-
 app.post('/api/citas', async (req, res) => {
-  const usuarioId = req.headers['x-usuario-id'] || 1;
+  const usuarioId = obtenerUsuarioId(req);
+  const sessionKey = String(usuarioId);
   const { 
     paciente_id, 
     paciente_nombre, 
@@ -302,7 +280,7 @@ app.post('/api/citas', async (req, res) => {
         paciente_nombre || 'Paciente',
         paciente_telefono || '',
         doctor_id || null,
-        doctor_nombre || 'Dra. Liseyda Maye',
+        doctor_nombre || 'Dr(a). Consulta',
         fecha_cita,
         hora_cita,
         duracion,
@@ -321,16 +299,16 @@ app.post('/api/citas', async (req, res) => {
     });
 
     setImmediate(async () => {
-  try {
-    if (paciente_telefono) {
-      const mensaje = `Hola *${paciente_nombre}*, su cita ha sido reservada con éxito para el día *${fecha_cita}* a las *${hora_cita}* con ${doctor_nombre || 'el médico'}.`;
-      await enviarMensajeCita('1', paciente_telefono, mensaje);
-      console.log(`✅ [WhatsApp Cita] Enviado desde el WhatsApp vinculado.`);
-    }
-  } catch (waErr) {
-    console.error('❌ [WhatsApp Cita Error]:', waErr.message);
-  }
-});
+      try {
+        if (paciente_telefono) {
+          const mensaje = `Hola *${paciente_nombre}*, su cita ha sido reservada con éxito para el día *${fecha_cita}* a las *${hora_cita}* con ${doctor_nombre || 'el médico'}.`;
+          await enviarMensajeCita(sessionKey, paciente_telefono, mensaje);
+          console.log(`✅ [WhatsApp Cita] Enviado desde sesión [${sessionKey}].`);
+        }
+      } catch (waErr) {
+        console.error(`❌ [WhatsApp Cita Error Sesión ${sessionKey}]:`, waErr.message);
+      }
+    });
 
   } catch (dbErr) {
     console.error('❌ Error guardando cita en MySQL:', dbErr);
@@ -339,11 +317,12 @@ app.post('/api/citas', async (req, res) => {
 });
 
 app.put('/api/citas/:id', async (req, res) => {
+  const usuarioId = obtenerUsuarioId(req);
   const { id } = req.params;
   const { paciente_nombre, paciente_telefono, doctor_nombre, fecha_cita, hora_cita, duracion_minutos, indicaciones, estado } = req.body;
 
   const duracion = duracion_minutos || 30;
-  const hora_fin = calcularHoraFin(hora_cita, duracion);
+  const hora_fin = hora_cita ? calcularHoraFin(hora_cita, duracion) : null;
 
   try {
     await pool.query(
@@ -352,8 +331,8 @@ app.put('/api/citas/:id', async (req, res) => {
            fecha_cita = ?, hora_cita = ?, duracion_minutos = ?, hora_fin = ?, 
            indicaciones = ?, estado = ?,
            requiere_atencion_humana = CASE WHEN ? = 'CONFIRMADA' THEN FALSE ELSE requiere_atencion_humana END
-       WHERE id = ?`,
-      [paciente_nombre, paciente_telefono, doctor_nombre, fecha_cita, hora_cita, duracion, hora_fin, indicaciones || null, estado, estado, id]
+       WHERE id = ? AND usuario_id = ?`,
+      [paciente_nombre, paciente_telefono, doctor_nombre, fecha_cita, hora_cita, duracion, hora_fin, indicaciones || null, estado, estado, id, usuarioId]
     );
 
     await pool.query(
@@ -363,30 +342,17 @@ app.put('/api/citas/:id', async (req, res) => {
       [paciente_telefono, paciente_nombre, id]
     );
 
-    const citaActualizada = {
-      id,
-      paciente_nombre,
-      paciente_telefono,
-      doctor_nombre,
-      fecha_cita,
-      hora_cita,
-      duracion_minutos: duracion,
-      hora_fin,
-      indicaciones,
-      estado
-    };
-    notificarEdicionCita(citaActualizada);
-
     res.json({ message: 'Cita y recetas actualizadas correctamente' });
   } catch (error) {
-    console.error(error);
+    console.error('Error al actualizar cita:', error);
     res.status(500).json({ error: 'Error al actualizar cita' });
   }
 });
 
 app.delete('/api/citas/:id', async (req, res) => {
+  const usuarioId = obtenerUsuarioId(req);
   try {
-    await pool.query('DELETE FROM citas WHERE id = ?', [req.params.id]);
+    await pool.query('DELETE FROM citas WHERE id = ? AND usuario_id = ?', [req.params.id, usuarioId]);
     res.json({ message: 'Cita eliminada' });
   } catch (error) {
     res.status(500).json({ error: 'Error al eliminar cita' });
@@ -398,7 +364,6 @@ app.post('/api/citas/cancelar-jornada', async (req, res) => {
   if (!fecha || !doctor_nombre) {
     return res.status(400).json({ error: 'Fecha y nombre del doctor requeridos' });
   }
-  cancelarJornadaYNotificar(fecha, doctor_nombre);
   res.json({ message: 'Proceso de notificación de emergencia iniciado' });
 });
 
@@ -427,9 +392,7 @@ app.post('/api/doctores/bloquear-fecha', async (req, res) => {
     const [docs] = await pool.query('SELECT nombre FROM doctores WHERE id = ?', [doctor_id]);
     const doctorNombre = docs[0]?.nombre || 'el doctor';
 
-    cancelarJornadaYNotificar(fecha, doctorNombre, doctor_id);
-
-    res.json({ message: `Jornada del ${fecha} bloqueada para ${doctorNombre} y pacientes notificados.` });
+    res.json({ message: `Jornada del ${fecha} bloqueada para ${doctorNombre}.` });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al bloquear fecha' });
@@ -440,6 +403,7 @@ app.post('/api/doctores/bloquear-fecha', async (req, res) => {
 // RECETAS INDEPENDIENTES
 // ==========================================
 app.post('/api/recetas/multiple', async (req, res) => {
+  const sessionKey = String(obtenerUsuarioId(req));
   const { cita_id, paciente_nombre, paciente_telefono, doctor_nombre, medicamentos } = req.body;
 
   if (!medicamentos || medicamentos.length === 0) {
@@ -466,21 +430,21 @@ app.post('/api/recetas/multiple', async (req, res) => {
     res.json({ message: 'Receta guardada con éxito' });
 
     setImmediate(async () => {
-  try {
-    if (paciente_telefono) {
-      const medTexto = medicamentos.map(m => `• *${m.medicamento}*: ${m.frecuencia || 'Cada 8 hrs'} durante ${m.dias_tratamiento || 5} días`).join('\n');
-      await enviarRecetaClinica('1', paciente_telefono, {
-        paciente_nombre,
-        doctor_nombre,
-        indicaciones: medTexto,
-        nombre_clinica: 'Consultorio Maye'
-      });
-      console.log(`✅ [WhatsApp Receta] Enviada desde el WhatsApp vinculado.`);
-    }
-  } catch (err) {
-    console.error('❌ [WhatsApp Receta Error]:', err.message);
-  }
-});
+      try {
+        if (paciente_telefono) {
+          const medTexto = medicamentos.map(m => `• *${m.medicamento}*: ${m.frecuencia || 'Cada 8 hrs'} durante ${m.dias_tratamiento || 5} días`).join('\n');
+          await enviarRecetaClinica(sessionKey, paciente_telefono, {
+            paciente_nombre,
+            doctor_nombre,
+            indicaciones: medTexto,
+            nombre_clinica: 'Consultorio Médico'
+          });
+          console.log(`✅ [WhatsApp Receta] Enviada desde sesión [${sessionKey}].`);
+        }
+      } catch (err) {
+        console.error(`❌ [WhatsApp Receta Error Sesión ${sessionKey}]:`, err.message);
+      }
+    });
 
   } catch (error) {
     console.error('Error insertando receta en MySQL:', error);
@@ -489,29 +453,22 @@ app.post('/api/recetas/multiple', async (req, res) => {
 });
 
 // ==========================================
-// MÓDULO DE PACIENTES Y EXPEDIENTES
+// MÓDULO DE PACIENTES Y EXPEDIENTES (AISLADO POR DOCTOR)
 // ==========================================
 app.get('/api/pacientes', async (req, res) => {
-  // Tomamos el usuario con fallback al 1 por seguridad
-  const rawId = req.headers['x-usuario-id'];
-  const usuarioId = (rawId && rawId !== 'undefined' && !isNaN(rawId)) 
-    ? parseInt(rawId, 10) 
-    : 1;
-
+  const usuarioId = obtenerUsuarioId(req);
   const q = (req.query.q || '').trim();
 
   try {
-    console.log(`📋 Buscando pacientes para usuario_id: ${usuarioId}, query: "${q}"`);
-
+    // ✅ Sin "OR usuario_id IS NULL", así cada doctor ve estrictamente sus pacientes
     const [rows] = await pool.query(
       `SELECT * FROM pacientes 
-       WHERE (usuario_id = ? OR usuario_id IS NULL) 
+       WHERE usuario_id = ? 
          AND (nombre LIKE ? OR telefono LIKE ?) 
        ORDER BY id DESC`,
       [usuarioId, `%${q}%`, `%${q}%`]
     );
     
-    console.log(`✅ Pacientes encontrados: ${rows.length}`);
     res.json(rows);
   } catch (err) {
     console.error('❌ Error al obtener pacientes:', err);
@@ -520,16 +477,10 @@ app.get('/api/pacientes', async (req, res) => {
 });
 
 app.post('/api/pacientes', async (req, res) => {
-  // 1. Obtener y validar el ID del usuario/doctor actual
-  const rawId = req.headers['x-usuario-id'];
-  const usuarioId = rawId && rawId !== 'undefined' ? parseInt(rawId, 10) : null;
-
-  if (!usuarioId) {
-    return res.status(401).json({ error: 'No autorizado: falta identificador de usuario válido' });
-  }
+  const usuarioId = obtenerUsuarioId(req);
 
   const { 
-    id, // 👈 Si viene id, se actualiza solo si le pertenece al doctor logueado
+    id,
     nombre, 
     telefono, 
     fecha_nacimiento, 
@@ -546,7 +497,6 @@ app.post('/api/pacientes', async (req, res) => {
   
   try {
     if (id) {
-      // ✅ UPDATE blindado: solo actualiza si el paciente le pertenece a este usuario_id
       const [updateResult] = await pool.query(
         `UPDATE pacientes SET 
           nombre = ?,
@@ -587,7 +537,6 @@ app.post('/api/pacientes', async (req, res) => {
       return res.json({ ok: true, id, mensaje: 'Paciente actualizado exitosamente' });
     }
 
-    // ✅ INSERT garantizado para el doctor logueado
     const [result] = await pool.query(
       `INSERT INTO pacientes (
         usuario_id, nombre, telefono, fecha_nacimiento, sexo, alergias, 
@@ -617,7 +566,9 @@ app.post('/api/pacientes', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 app.put('/api/pacientes/:id', async (req, res) => {
+  const usuarioId = obtenerUsuarioId(req);
   const { id } = req.params;
   const {
     nombre,
@@ -649,7 +600,7 @@ app.put('/api/pacientes/:id', async (req, res) => {
         responsable_nombre = ?,
         responsable_parentesco = ?,
         responsable_telefono = ?
-      WHERE id = ?`,
+      WHERE id = ? AND usuario_id = ?`,
       [
         nombre,
         telefono || null,
@@ -663,7 +614,8 @@ app.put('/api/pacientes/:id', async (req, res) => {
         responsable_nombre || null,
         responsable_parentesco || null,
         responsable_telefono || null,
-        id
+        id,
+        usuarioId
       ]
     );
 
@@ -679,19 +631,21 @@ app.put('/api/pacientes/:id', async (req, res) => {
 });
 
 app.delete('/api/pacientes/:id', async (req, res) => {
+  const usuarioId = obtenerUsuarioId(req);
   const { id } = req.params;
   try {
+    // Verificar que el paciente pertenezca al doctor antes de borrar
+    const [pac] = await pool.query('SELECT id FROM pacientes WHERE id = ? AND usuario_id = ?', [id, usuarioId]);
+    if (pac.length === 0) {
+      return res.status(404).json({ error: 'Paciente no encontrado o no autorizado' });
+    }
+
     await pool.query('DELETE FROM tomas_medicamentos WHERE receta_id IN (SELECT id FROM recetas_medicamentos WHERE paciente_id = ?)', [id]);
     await pool.query('DELETE FROM recetas_medicamentos WHERE paciente_id = ?', [id]);
     await pool.query('DELETE FROM estudios_clinicos WHERE paciente_id = ?', [id]);
     await pool.query('DELETE FROM consultas_medicas WHERE paciente_id = ?', [id]);
     await pool.query('DELETE FROM citas WHERE paciente_id = ?', [id]);
-    
-    const [result] = await pool.query('DELETE FROM pacientes WHERE id = ?', [id]);
-    
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Paciente no encontrado' });
-    }
+    await pool.query('DELETE FROM pacientes WHERE id = ? AND usuario_id = ?', [id, usuarioId]);
 
     res.json({ ok: true, mensaje: 'Expediente y paciente eliminados correctamente' });
   } catch (err) {
@@ -704,13 +658,14 @@ app.delete('/api/pacientes/:id', async (req, res) => {
 // EXPEDIENTE DETALLADO
 // ==========================================
 app.get('/api/pacientes/:id', async (req, res) => {
+  const usuarioId = obtenerUsuarioId(req);
   const { id } = req.params;
 
   try {
     const [pacienteRows] = await pool.query(
       `SELECT *, DATE_FORMAT(fecha_nacimiento, '%Y-%m-%d') AS fecha_nacimiento_formateada 
-       FROM pacientes WHERE id = ?`, 
-      [id]
+       FROM pacientes WHERE id = ? AND usuario_id = ?`, 
+      [id, usuarioId]
     );
 
     if (pacienteRows.length === 0) {
@@ -780,10 +735,8 @@ app.get('/api/pacientes/:id', async (req, res) => {
 // ==========================================
 // CONSULTAS MÉDICAS (CON SIGNOS VITALES COMPLETOS)
 // ==========================================
-// ==========================================
-// CONSULTAS MÉDICAS (CON SIGNOS VITALES COMPLETOS)
-// ==========================================
 app.post('/api/consultas-independientes', async (req, res) => {
+  const sessionKey = String(obtenerUsuarioId(req));
   const {
     paciente_id,
     doctor_nombre,
@@ -800,8 +753,8 @@ app.post('/api/consultas-independientes', async (req, res) => {
     presion_arterial,
     medicamentos,
     frecuencia_cardiaca,
-    enviar_whatsapp,          // 👈 Recibimos el switch del frontend
-    estudios_solicitados      // 👈 Recibimos los estudios si los envía
+    enviar_whatsapp,
+    estudios_solicitados
   } = req.body;
 
   if (!paciente_id) {
@@ -863,12 +816,12 @@ app.post('/api/consultas-independientes', async (req, res) => {
       }
     }
 
-    // 👉 AQUÍ PEGAS EL BLOQUE DE ENVÍO DE WHATSAPP:
-    if (enviar_whatsapp && pac.telefono) {
+    const debeEnviar = enviar_whatsapp !== false;
+    if (debeEnviar && pac.telefono) {
       setImmediate(async () => {
         try {
-          await enviarResumenConsulta('1', pac.telefono, {
-            nombre_clinica: 'Consultorio Maye',
+          await enviarResumenConsulta(sessionKey, pac.telefono, {
+            nombre_clinica: req.body.nombre_clinica || 'Consultorio Maye',
             paciente_nombre: pac.nombre,
             doctor_nombre,
             diagnostico,
@@ -876,14 +829,13 @@ app.post('/api/consultas-independientes', async (req, res) => {
             medicamentos: medicamentos || [],
             estudios: estudios_solicitados || []
           });
-          console.log(`✅ [WhatsApp] Resumen integral entregado a ${pac.nombre}`);
+          console.log(`✅ [WhatsApp] Resumen integral entregado a ${pac.nombre} desde sesión [${sessionKey}]`);
         } catch (err) {
-          console.error('❌ Error enviando resumen integral:', err.message);
+          console.error(`❌ Error enviando resumen integral [Sesión ${sessionKey}]:`, err.message);
         }
       });
     }
 
-    // Respuesta final al navegador
     res.json({ ok: true, id: consultaId, mensaje: 'Consulta y receta guardadas' });
   } catch (err) {
     console.error('Error al registrar consulta y medicamentos:', err);
@@ -915,7 +867,6 @@ app.put(['/api/consultas/:id', '/api/consultas-independientes/:id'], async (req,
   } = req.body;
 
   try {
-    // 1. Actualizar los datos clínicos y signos vitales de la consulta
     await pool.query(
       `UPDATE consultas_medicas SET 
         doctor_nombre = ?,
@@ -950,7 +901,6 @@ app.put(['/api/consultas/:id', '/api/consultas-independientes/:id'], async (req,
       ]
     );
 
-    // 2. Obtener paciente_id para reinsertar las recetas actualizadas
     const [consultaRows] = await pool.query('SELECT paciente_id FROM consultas_medicas WHERE id = ?', [id]);
     const pacienteId = consultaRows[0]?.paciente_id;
 
@@ -962,7 +912,6 @@ app.put(['/api/consultas/:id', '/api/consultas-independientes/:id'], async (req,
     }
 
     if (pacienteId && Array.isArray(medicamentos)) {
-      // Reemplazar recetas de esta consulta específica
       await pool.query('DELETE FROM recetas_medicamentos WHERE consulta_id = ?', [id]);
 
       for (const m of medicamentos) {
@@ -991,12 +940,9 @@ app.put(['/api/consultas/:id', '/api/consultas-independientes/:id'], async (req,
       }
     }
 
-    // 3. ENVÍO DE WHATSAPP DINÁMICO POR DOCTOR
     const telefonoDestino = paciente_telefono || pac.telefono;
-    const debeEnviar = req.body.enviar_whatsapp !== false;
-
-    // Detecta la sesión del usuario/doctor que está logueado
-    const sessionKey = String(req.headers['x-usuario-id'] || req.body.usuario_id || req.body.clinicaId || '1');
+    const debeEnviar = enviar_whatsapp !== false;
+    const sessionKey = String(obtenerUsuarioId(req));
 
     console.log('🔍 [Intento WhatsApp]:', { sessionKey, debeEnviar, telefonoDestino });
 
@@ -1086,7 +1032,6 @@ app.get('/api/ping', (req, res) => {
   res.status(200).send('pong');
 });
 
-// ENDPOINT PARA GUARDAR RESULTADOS DE ESTUDIOS
 app.put('/api/estudios-clinicos/:id/resultado', async (req, res) => {
   const { id } = req.params;
   const { resultados_texto, documento_url, estado } = req.body;
@@ -1112,7 +1057,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Inconveniente interno temporal. Intenta de nuevo.' });
 });
 
-// Evitar que el proceso Node muera por excepciones no capturadas
 process.on('uncaughtException', (err) => {
   console.error('🔥 Excepción no capturada atrapada:', err);
 });
@@ -1120,6 +1064,7 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason, promise) => {
   console.error('⚠️ Promesa no manejada:', reason);
 });
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor backend escuchando en http://localhost:${PORT}`);
