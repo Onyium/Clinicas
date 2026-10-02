@@ -888,8 +888,8 @@ app.put(['/api/consultas/:id', '/api/consultas-independientes/:id'], async (req,
     presion_arterial,
     frecuencia_cardiaca,
     medicamentos,
-    enviar_whatsapp,          // 👈 Toggle del frontend
-    paciente_telefono,        // 👈 Teléfono enviado directamente
+    enviar_whatsapp,
+    paciente_telefono,
     estudios_solicitados
   } = req.body;
 
@@ -970,32 +970,33 @@ app.put(['/api/consultas/:id', '/api/consultas-independientes/:id'], async (req,
       }
     }
 
+    // 3. ENVÍO DE WHATSAPP DINÁMICO POR DOCTOR
     const telefonoDestino = paciente_telefono || pac.telefono;
+    const debeEnviar = req.body.enviar_whatsapp !== false;
 
-// 👉 Si viene undefined, le decimos que sea true por defecto
-const debeEnviar = req.body.enviar_whatsapp !== false; 
+    // Detecta la sesión del usuario/doctor que está logueado
+    const sessionKey = String(req.headers['x-usuario-id'] || req.body.usuario_id || req.body.clinicaId || '1');
 
-console.log('🔍 [Intento WhatsApp]:', { debeEnviar, telefonoDestino });
+    console.log('🔍 [Intento WhatsApp]:', { sessionKey, debeEnviar, telefonoDestino });
 
-if (debeEnviar && telefonoDestino) {
-  setImmediate(async () => {
-    try {
-      await enviarResumenConsulta('1', telefonoDestino, {
-        nombre_clinica: 'Consultorio Maye',
-        paciente_nombre: pac.nombre || req.body.paciente_nombre || 'Estimado(a) Paciente',
-        doctor_nombre: doctor_nombre || 'Médico tratante',
-        diagnostico,
-        plan_tratamiento,
-        medicamentos: medicamentos || [],
-        estudios: estudios_solicitados || []
+    if (debeEnviar && telefonoDestino) {
+      setImmediate(async () => {
+        try {
+          await enviarResumenConsulta(sessionKey, telefonoDestino, {
+            nombre_clinica: req.body.nombre_clinica || 'Consultorio Maye',
+            paciente_nombre: pac.nombre || req.body.paciente_nombre || 'Estimado(a) Paciente',
+            doctor_nombre: doctor_nombre || 'Médico tratante',
+            diagnostico,
+            plan_tratamiento,
+            medicamentos: medicamentos || [],
+            estudios: estudios_solicitados || []
+          });
+          console.log(`✅ [WhatsApp] Resumen entregado a ${telefonoDestino} vía sesión [${sessionKey}]`);
+        } catch (err) {
+          console.error(`❌ [WhatsApp Error Sesión ${sessionKey}]:`, err.message);
+        }
       });
-      console.log(`✅ [WhatsApp] Resumen entregado a ${telefonoDestino}`);
-    } catch (err) {
-      console.error('❌ [WhatsApp Error]:', err.message);
     }
-  });
-}
-    
 
     res.json({ ok: true, mensaje: 'Consulta y recetas actualizadas correctamente' });
   } catch (err) {

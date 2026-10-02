@@ -1,23 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../api';
 
-export default function WhatsAppConfigModal({ clinicaId = '1', isOpen, onClose }) {
+export default function WhatsAppConfigModal({ clinicaId, isOpen, onClose }) {
+  // 1. Obtener dinámicamente el ID del doctor logueado con fallback seguro
+  const usuarioLocal = JSON.parse(localStorage.getItem('usuario') || '{}');
+  const targetId = String(clinicaId || usuarioLocal.id || '1');
+
   const [estado, setEstado] = useState('cargando'); // 'cargando' | 'esperando_qr' | 'conectado' | 'desconectado'
   const [qrSrc, setQrSrc] = useState(null);
   const [cargandoAccion, setCargandoAccion] = useState(false);
 
-  const consultarEstado = async () => {
+  const consultarEstado = useCallback(async () => {
     try {
-      const res = await api.get(`/api/whatsapp/estado/${clinicaId}`);
+      const res = await api.get(`/api/whatsapp/estado/${targetId}`);
       if (res.data) {
         setEstado(res.data.status);
         setQrSrc(res.data.qr || null);
       }
     } catch (error) {
-      console.error('Error consultando estado de WhatsApp:', error);
+      console.error(`Error consultando estado de WhatsApp para sesión ${targetId}:`, error);
       setEstado('desconectado');
     }
-  };
+  }, [targetId]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -25,7 +29,7 @@ export default function WhatsAppConfigModal({ clinicaId = '1', isOpen, onClose }
     // Consulta inicial al abrir el modal
     consultarEstado();
 
-    // Polling cada 3 segundos si aún no está conectado
+    // Polling cada 3 segundos mientras no esté conectado
     const interval = setInterval(() => {
       if (estado !== 'conectado') {
         consultarEstado();
@@ -33,16 +37,34 @@ export default function WhatsAppConfigModal({ clinicaId = '1', isOpen, onClose }
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [isOpen, estado, clinicaId]);
+  }, [isOpen, estado, consultarEstado]);
 
   const handleForzarReconexion = async () => {
     setCargandoAccion(true);
     setEstado('cargando');
     setQrSrc(null);
     try {
-      await api.get(`/api/whatsapp/estado/${clinicaId}`);
+      await api.get(`/api/whatsapp/estado/${targetId}`);
     } catch (err) {
       console.error('Error al forzar reconexión:', err);
+    } finally {
+      setCargandoAccion(false);
+    }
+  };
+
+  const handleDesconectar = async () => {
+    const confirmar = window.confirm(
+      '¿Seguro que deseas desvincular este WhatsApp? Tendrás que volver a escanear el código QR para enviar mensajes.'
+    );
+    if (!confirmar) return;
+
+    setCargandoAccion(true);
+    try {
+      await api.post(`/api/whatsapp/desconectar/${targetId}`);
+      setEstado('desconectado');
+      setQrSrc(null);
+    } catch (err) {
+      console.error('Error al desconectar WhatsApp:', err);
     } finally {
       setCargandoAccion(false);
     }
@@ -74,6 +96,7 @@ export default function WhatsAppConfigModal({ clinicaId = '1', isOpen, onClose }
         {/* Contenedor de Estado Dinámico */}
         <div className="text-center py-2 space-y-3 min-h-[220px] flex flex-col justify-center items-center">
           
+          {/* 1. ESTADO: CONECTADO */}
           {estado === 'conectado' && (
             <div className="w-full bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl text-xs space-y-3">
               <div className="w-10 h-10 mx-auto bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-lg font-bold">
@@ -81,28 +104,14 @@ export default function WhatsAppConfigModal({ clinicaId = '1', isOpen, onClose }
               </div>
               <p className="font-bold text-sm text-emerald-900">WhatsApp Vinculado</p>
               <p className="text-emerald-700 leading-relaxed">
-                El sistema está listo. Los recordatorios de citas se enviarán de forma automática desde el número de la clínica.
+                El sistema está listo. Los resúmenes de consulta y recordatorios se enviarán de forma automática desde tu número.
               </p>
 
               {/* Botón para desconectar la sesión */}
               <button
                 type="button"
                 disabled={cargandoAccion}
-                onClick={async () => {
-                  const confirmar = window.confirm('¿Seguro que deseas desvincular el WhatsApp de la clínica? Tendrás que volver a escanear el código QR para enviar mensajes.');
-                  if (!confirmar) return;
-
-                  setCargandoAccion(true);
-                  try {
-                    await api.post(`/api/whatsapp/desconectar/${clinicaId}`);
-                    setEstado('desconectado');
-                    setQrSrc(null);
-                  } catch (err) {
-                    console.error('Error al desconectar WhatsApp:', err);
-                  } finally {
-                    setCargandoAccion(false);
-                  }
-                }}
+                onClick={handleDesconectar}
                 className="mt-2 w-full py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-xs transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-xs"
               >
                 {cargandoAccion ? (
@@ -121,7 +130,7 @@ export default function WhatsAppConfigModal({ clinicaId = '1', isOpen, onClose }
           {estado === 'esperando_qr' && qrSrc && (
             <div className="space-y-3 w-full">
               <p className="text-xs text-slate-600 px-2 leading-tight">
-                Abra WhatsApp en el celular &gt; <strong>Dispositivos vinculados</strong> &gt; <strong>Vincular un dispositivo</strong>:
+                Abre WhatsApp en tu teléfono &gt; <strong>Dispositivos vinculados</strong> &gt; <strong>Vincular un dispositivo</strong>:
               </p>
               <div className="flex justify-center">
                 <div className="p-2 bg-white border border-slate-200 rounded-2xl shadow-inner inline-block">
@@ -151,7 +160,7 @@ export default function WhatsAppConfigModal({ clinicaId = '1', isOpen, onClose }
             <div className="w-full bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-xl text-xs space-y-3">
               <p className="font-bold text-sm text-rose-900">Sesión no iniciada</p>
               <p className="text-rose-700">
-                No hay una sesión activa o se perdió la conexión con el teléfono.
+                No hay una sesión activa o se perdió la conexión con tu teléfono.
               </p>
               <button
                 type="button"
