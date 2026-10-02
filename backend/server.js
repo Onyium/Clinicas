@@ -969,6 +969,132 @@ app.put('/api/consultas-independientes/:id', async (req, res) => {
   }
 });
 
+app.put('/api/consultas/:id', async (req, res) => {
+  const { id } = req.params;
+  const {
+    doctor_nombre,
+    motivo_consulta,
+    enfermedad_actual,
+    antecedentes_patologicos,
+    examen_fisico,
+    reporte_examenes,
+    diagnostico,
+    plan_tratamiento,
+    peso,
+    talla,
+    temperatura,
+    presion_arterial,
+    frecuencia_cardiaca,
+    medicamentos,
+    enviar_whatsapp,          // 👈 Toggle del frontend
+    paciente_telefono,        // 👈 Teléfono enviado directamente
+    estudios_solicitados
+  } = req.body;
+
+  try {
+    // 1. Actualizar los datos clínicos y signos vitales de la consulta
+    await pool.query(
+      `UPDATE consultas_medicas SET 
+        doctor_nombre = ?,
+        motivo_consulta = ?,
+        enfermedad_actual = ?,
+        antecedentes_patologicos = ?,
+        examen_fisico = ?,
+        reporte_examenes = ?,
+        diagnostico = ?,
+        plan_tratamiento = ?,
+        peso = ?,
+        talla = ?,
+        temperatura = ?,
+        presion_arterial = ?,
+        frecuencia_cardiaca = ?
+      WHERE id = ?`,
+      [
+        doctor_nombre || 'Dr(a). Consulta',
+        motivo_consulta || null,
+        enfermedad_actual || null,
+        antecedentes_patologicos || null,
+        examen_fisico || null,
+        reporte_examenes || null,
+        diagnostico || null,
+        plan_tratamiento || null,
+        peso || null,
+        talla || null,
+        temperatura || null,
+        presion_arterial || null,
+        frecuencia_cardiaca || null,
+        id
+      ]
+    );
+
+    // 2. Obtener paciente_id para reinsertar las recetas actualizadas
+    const [consultaRows] = await pool.query('SELECT paciente_id FROM consultas_medicas WHERE id = ?', [id]);
+    const pacienteId = consultaRows[0]?.paciente_id;
+
+    let pac = {};
+
+    if (pacienteId && Array.isArray(medicamentos)) {
+      // Reemplazar recetas de esta consulta específica
+      await pool.query('DELETE FROM recetas_medicamentos WHERE consulta_id = ?', [id]);
+
+      const [pacRows] = await pool.query('SELECT nombre, telefono FROM pacientes WHERE id = ?', [pacienteId]);
+      pac = pacRows[0] || {};
+
+      for (const m of medicamentos) {
+        const nombreMed = (m.medicamento || m.nombre || '').trim();
+        if (!nombreMed) continue;
+
+        const frecuencia = (m.frecuencia || '').trim();
+        const indicacion = (m.indicacion || '').trim();
+        const dosis = [frecuencia, indicacion].filter(Boolean).join(' - ') || 'Según indicación médica';
+        const dias = parseInt(m.dias_tratamiento, 10) || 5;
+
+        await pool.query(
+          `INSERT INTO recetas_medicamentos 
+            (consulta_id, paciente_id, paciente_nombre, paciente_telefono, medicamento, dosis_indicacion, fecha_inicio, dias_tratamiento, hora_recordatorio, activo)
+            VALUES (?, ?, ?, ?, ?, ?, CURDATE(), ?, '08:00:00', TRUE)`,
+          [
+            id,
+            pacienteId,
+            pac.nombre || req.body.paciente_nombre || 'Paciente',
+            pac.telefono || paciente_telefono || '',
+            nombreMed,
+            dosis,
+            dias
+          ]
+        );
+      }
+    }
+
+    // 3. ENVÍO DE RESUMEN POR WHATSAPP
+    const telefonoDestino = paciente_telefono || pac.telefono;
+
+    if (enviar_whatsapp && telefonoDestino) {
+      setImmediate(async () => {
+        try {
+          await enviarResumenConsulta('1', telefonoDestino, {
+            nombre_clinica: 'Consultorio Maye',
+            paciente_nombre: pac.nombre || req.body.paciente_nombre || 'Estimado(a) Paciente',
+            doctor_nombre: doctor_nombre || 'Médico tratante',
+            diagnostico,
+            plan_tratamiento,
+            medicamentos: medicamentos || [],
+            estudios: estudios_solicitados || []
+          });
+          console.log(`✅ [WhatsApp] Resumen entregado a ${telefonoDestino}`);
+        } catch (err) {
+          console.error('❌ [WhatsApp Error]:', err.message);
+        }
+      });
+    }
+
+    res.json({ ok: true, mensaje: 'Consulta y recetas actualizadas correctamente' });
+  } catch (err) {
+    console.error('Error al actualizar consulta médica:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.delete('/api/consultas-independientes/:id', async (req, res) => {
   const { id } = req.params;
   try {
