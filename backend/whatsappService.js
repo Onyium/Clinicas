@@ -11,6 +11,12 @@ import fs from 'fs';
 const sessions = new Map();
 
 export const initWhatsAppSession = async (clinicaId) => {
+  const sesionExistente = sessions.get(clinicaId);
+  // Candado anti-bucle: si ya existe o está en progreso, reutilizarlo
+  if (sesionExistente && (sesionExistente.status === 'conectando' || sesionExistente.status === 'conectado')) {
+    return sesionExistente.sock;
+  }
+
   const sessionDir = path.resolve(`./auth_sessions/clinica_${clinicaId}`);
 
   if (!fs.existsSync(sessionDir)) {
@@ -76,7 +82,9 @@ export const initWhatsAppSession = async (clinicaId) => {
       } else {
         // El usuario cerró sesión explícitamente desde WhatsApp Web en el celular
         sessions.set(clinicaId, { sock: null, qrBase64: null, status: 'desconectado' });
-        fs.rmSync(sessionDir, { recursive: true, force: true });
+        if (fs.existsSync(sessionDir)) {
+          fs.rmSync(sessionDir, { recursive: true, force: true });
+        }
       }
     }
   });
@@ -93,7 +101,7 @@ export const getWhatsAppStatus = (clinicaId) => {
   return { status: session.status, qr: session.qrBase64 };
 };
 
-// Función robusta para enviar confirmación o recordatorio
+// Enviar confirmación o recordatorio de cita
 export const enviarMensajeCita = async (clinicaId, telefono, mensaje) => {
   const session = sessions.get(clinicaId);
 
@@ -101,17 +109,14 @@ export const enviarMensajeCita = async (clinicaId, telefono, mensaje) => {
     throw new Error('El WhatsApp de la clínica no está vinculado o conectado.');
   }
 
-  // Limpieza del número: quitar guiones, espacios y asegurar prefijo 503
-  let limpio = telefono.replace(/\D/g, '');
-  if (!limpio.startsWith('503')) {
-    limpio = `503${limpio}`;
-  }
-
+  let limpio = String(telefono).replace(/\D/g, '');
+  if (limpio.length === 8) limpio = `503${limpio}`;
   const jid = `${limpio}@s.whatsapp.net`;
 
   return await session.sock.sendMessage(jid, { text: mensaje });
 };
 
+// Desconectar sesión manualmente
 export const desconectarWhatsApp = async (clinicaId) => {
   const session = sessions.get(clinicaId);
   const sessionDir = path.resolve(`./auth_sessions/clinica_${clinicaId}`);
@@ -120,14 +125,12 @@ export const desconectarWhatsApp = async (clinicaId) => {
     try {
       await session.sock.logout();
     } catch (err) {
-      console.warn('Error en socket logout (puede que ya estuviera cerrado):', err.message);
+      console.warn('Error en socket logout:', err.message);
     }
   }
 
-  // Limpiar memoria
   sessions.delete(clinicaId);
 
-  // Borrar carpeta de credenciales para forzar nuevo QR al reconectar
   if (fs.existsSync(sessionDir)) {
     fs.rmSync(sessionDir, { recursive: true, force: true });
   }
@@ -135,6 +138,7 @@ export const desconectarWhatsApp = async (clinicaId) => {
   return { ok: true, status: 'desconectado' };
 };
 
+// Enviar resumen integral de consulta
 export const enviarResumenConsulta = async (clinicaId, telefono, datos) => {
   const session = sessions.get(String(clinicaId));
 
@@ -142,12 +146,10 @@ export const enviarResumenConsulta = async (clinicaId, telefono, datos) => {
     throw new Error('El WhatsApp de la clínica no está vinculado o activo.');
   }
 
-  // Normalizar número a formato SV
   let limpio = String(telefono).replace(/\D/g, '');
   if (limpio.length === 8) limpio = `503${limpio}`;
   const jid = `${limpio}@s.whatsapp.net`;
 
-  // Construcción del texto
   let mensaje = `📋 *RESUMEN DE CONSULTA MÉDICA*\n`;
   mensaje += `🏥 *${datos.nombre_clinica || 'Consultorio Médico'}*\n`;
   mensaje += `━━━━━━━━━━━━━━━━━━━━━\n`;
@@ -159,7 +161,6 @@ export const enviarResumenConsulta = async (clinicaId, telefono, datos) => {
     mensaje += `📝 *DIAGNÓSTICO:*\n${datos.diagnostico}\n\n`;
   }
 
-  // Sección de medicamentos
   if (Array.isArray(datos.medicamentos) && datos.medicamentos.length > 0) {
     mensaje += `💊 *TRATAMIENTO / MEDICAMENTOS:*\n`;
     datos.medicamentos.forEach((m) => {
@@ -172,7 +173,6 @@ export const enviarResumenConsulta = async (clinicaId, telefono, datos) => {
     mensaje += `\n`;
   }
 
-  // Sección de laboratorios / estudios
   if (datos.estudios && datos.estudios.length > 0) {
     mensaje += `🧪 *ESTUDIOS / LABORATORIOS INDICADOS:*\n`;
     if (Array.isArray(datos.estudios)) {
@@ -185,7 +185,6 @@ export const enviarResumenConsulta = async (clinicaId, telefono, datos) => {
     mensaje += `\n`;
   }
 
-  // Indicaciones o plan general
   if (datos.plan_tratamiento) {
     mensaje += `📌 *INDICACIONES GENERALES:*\n${datos.plan_tratamiento}\n\n`;
   }
@@ -194,4 +193,12 @@ export const enviarResumenConsulta = async (clinicaId, telefono, datos) => {
   mensaje += `_Comprobante informativo emitido por su médico tratante._`;
 
   return await session.sock.sendMessage(jid, { text: mensaje.trim() });
+};
+
+// Export de compatibilidad para evitar caídas en server.js
+export const enviarRecetaClinica = async (clinicaId, telefono, datosReceta) => {
+  return await enviarResumenConsulta(clinicaId, telefono, {
+    ...datosReceta,
+    plan_tratamiento: datosReceta.indicaciones
+  });
 };
