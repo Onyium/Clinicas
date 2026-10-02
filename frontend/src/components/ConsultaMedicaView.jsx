@@ -69,16 +69,20 @@ export default function ConsultaMedicaView({ cita, onVolver }) {
     try {
       await api.put(`/api/consultas/${cita.id}`, {
         ...form,
-        medicamentos: medicamentos.filter(m => m.medicamento.trim() !== '')
+        medicamentos: medicamentos.filter(m => m.medicamento.trim() !== ''),
+        enviar_whatsapp: enviarPorWhatsApp, // 👈 Pasamos el estado del toggle
+        paciente_telefono: cita.paciente_telefono, // 👈 Garantizamos el teléfono
+        paciente_nombre: cita.paciente_nombre,
+        doctor_nombre: cita.doctor_nombre
       });
       toast.success('✅ Consulta clínica y receta guardadas correctamente.');
     } catch (err) {
+      console.error('Error al guardar consulta:', err);
       toast.error('Error al guardar la consulta');
     } finally {
       setGuardando(false);
     }
   };
-
   if (loading) {
     return <div className="p-10 text-center text-slate-500">Cargando expediente de la consulta...</div>;
   }
@@ -86,14 +90,18 @@ export default function ConsultaMedicaView({ cita, onVolver }) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 max-w-5xl mx-auto space-y-6">
       
-      {/* Barra superior */}
-      <div className="flex justify-between items-center pb-4 border-b border-slate-200">
-        <div>
-          <span className="text-xs font-bold tracking-wider text-blue-600 uppercase">Expediente Clínico / Consulta Médica</span>
-          <h1 className="text-xl font-black text-slate-800">{cita.paciente_nombre}</h1>
-          <p className="text-xs text-slate-500">Tel: {cita.paciente_telefono} | Dr(a): {cita.doctor_nombre}</p>
-        </div>
-        <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
+          {/* Switch rápido de WhatsApp */}
+          <label className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-xl cursor-pointer select-none text-emerald-800 hover:bg-emerald-100 transition">
+            <input
+              type="checkbox"
+              checked={enviarPorWhatsApp}
+              onChange={(e) => setEnviarPorWhatsApp(e.target.checked)}
+              className="w-3.5 h-3.5 text-emerald-600 rounded focus:ring-emerald-500 border-emerald-300 cursor-pointer"
+            />
+            <span className="text-xs font-bold">📲 Enviar a WhatsApp</span>
+          </label>
+
           <button
             type="button"
             onClick={onVolver}
@@ -101,6 +109,7 @@ export default function ConsultaMedicaView({ cita, onVolver }) {
           >
             ← Volver a Agenda
           </button>
+          
           <button
             type="button"
             onClick={handleGuardar}
@@ -110,7 +119,6 @@ export default function ConsultaMedicaView({ cita, onVolver }) {
             {guardando ? 'Guardando...' : '💾 Guardar Consulta'}
           </button>
         </div>
-      </div>
 
       <form onSubmit={handleGuardar} className="space-y-6">
         
